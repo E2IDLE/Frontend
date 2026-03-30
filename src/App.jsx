@@ -58,7 +58,7 @@ function Modal({ icon, title, sub, badge, onClose, children }) {
    GLOBAL CSS
 ═══════════════════════════════════════════ */
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#080c10;--surface:#0e1318;--surface2:#141a22;--surface3:#192030;
@@ -66,7 +66,7 @@ const css = `
   --accent:#2563eb;--accent2:#3b82f6;--accent-glow:rgba(37,99,235,0.25);
   --text:#e8edf2;--text2:#8a9bb0;--text3:#4a5f75;
   --green:#10b981;--yellow:#f59e0b;--red:#ef4444;
-  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+  --mono:'Noto Sans KR',monospace;--sans:'Noto Sans KR',sans-serif;--display:'Syne',Noto Sans KR;
 }
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;overflow-x:hidden}
@@ -366,7 +366,7 @@ function Landing({ setPage }) {
   return (
     <div className="page">
       <PubNav setPage={setPage} />
-      <div className="hero">
+      <div className="hero" style={{alignItems:"center", textAlign:"center"}}>
         <div className="hero-grid" /><div className="hero-glow" />
         <div className="hero-badge"><span className="badge-dot" /> New Release — 8K RAW Streaming Engine V2.0</div>
         <h1 className="hero-title">가장 빠른 8K<br />영상 협업의 <em>시작</em>,<br />DirectP2P</h1>
@@ -383,9 +383,9 @@ function Landing({ setPage }) {
         </div>
       </div>
 
-      <div style={{ padding:"100px 48px" }}>
+      <div style={{ padding:"100px 48px", textAlign:"center" }}>
         <div className="section-label">// CORE TECHNOLOGY</div>
-        <h2 className="section-title">프로페셔널을 위한<br />정밀한 성능</h2>
+        <h2 className="section-title" style={{maxWidth:"100%"}}>프로페셔널을 위한<br />정밀한 성능</h2>
         <div className="features-grid">
           {[
             { icon:"⚡", metric:"1.2 Gbps", title:"P2P Speed", desc:"전용 회선급의 압도적인 속도. 중앙 서버의 병목 현상 없이 유저 간 다이렉트 연결로 8K 대용량 파일을 수초 내에 전송합니다.", action:() => toast("P2P 속도 벤치마크 문서로 이동합니다.", "info") },
