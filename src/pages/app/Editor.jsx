@@ -77,9 +77,6 @@ export default function Editor() {
           <div style={{ fontSize:12,color:"var(--text2)",marginBottom:2 }}>송신처: 촬영 현장 A</div>
           <div style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
         </div>
-        <div style={{ display:"flex",flexDirection:"column",gap:6,padding:"12px 14px",marginTop:"auto",borderTop:"1px solid var(--border)" }}>
-          <button className="btn-sm-blue" onClick={() => { toast(`${files[activeFile].name} 타임라인에 추가됨`, "ok"); }}>미디어 가져오기</button>
-        </div>
       </div>
 
       {/* Center */}

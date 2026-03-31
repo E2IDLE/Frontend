@@ -5,12 +5,9 @@ export default function Sidebar({ tab, setTab }) {
     <div className="sidebar">
       <div style={{ padding:"14px 10px 6px" }}>
         <div className="sidebar-label">WORKSPACE</div>
-        {[{ icon:"◈", label:"/p / v1", active:true }, { icon:"◫", label:"미디어 가져오기" }].map(i => (
-          <div key={i.label} className={`sidebar-item${i.active?" active":""}`}
-            onClick={() => !i.active && toast("미디어 파일을 선택해주세요.", "info")}>
-            <div style={{ display:"flex",alignItems:"center",gap:8 }}><span>{i.icon}</span>{i.label}</div>
-          </div>
-        ))}
+        <div className="sidebar-item active">
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span>◈</span>/p / v1</div>
+        </div>
       </div>
       <div style={{ height:1,background:"var(--border)",margin:"6px 10px" }} />
       <div style={{ padding:"8px 10px" }}>
