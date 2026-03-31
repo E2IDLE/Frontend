@@ -119,7 +119,7 @@ function LegalModal({ type, onClose }) {
 
 export default function Auth({ mode, setPage }) {
   const isLogin = mode === "login";
-  const [form, setForm] = useState({ name:"", nick:"", email:"", pw:"", agree:false });
+  const [form, setForm] = useState({ name:"", nick:"", email:"", pw:"", agreeTerms:false, agreePrivacy:false });
   const [errs, setErrs] = useState({});
   const [loading, setLoading] = useState(false);
   const [legalModal, setLegalModal] = useState(null);
@@ -130,7 +130,8 @@ export default function Auth({ mode, setPage }) {
     if (!isLogin && !form.name.trim()) e.name = "이름을 입력하세요.";
     if (!form.email.includes("@")) e.email = "올바른 이메일 주소를 입력하세요.";
     if (form.pw.length < 6) e.pw = "비밀번호는 6자 이상이어야 합니다.";
-    if (!isLogin && !form.agree) e.agree = "이용약관에 동의해야 합니다.";
+    if (!isLogin && !form.agreeTerms) e.agreeTerms = "이용약관에 동의해야 합니다.";
+    if (!isLogin && !form.agreePrivacy) e.agreePrivacy = "개인정보처리방침에 동의해야 합니다.";
     return e;
   };
 
@@ -171,15 +172,25 @@ export default function Auth({ mode, setPage }) {
                 <button style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)",background:"none",border:"none",cursor:"pointer" }}
                   onClick={() => toast("비밀번호 재설정 이메일이 발송되었습니다.", "info")}>비밀번호를 잊으셨나요?</button>
               </div>
-            : <div>
-                <div style={{ display:"flex",alignItems:"flex-start",gap:10,marginBottom:errs.agree?6:20 }}>
-                  <input type="checkbox" id="terms" checked={form.agree} onChange={e=>set("agree",e.target.checked)} style={{ marginTop:2,accentColor:"var(--accent)" }} />
-                  <label htmlFor="terms" style={{ fontSize:12,color:"var(--text2)" }}>
-                    <span style={{ color:"var(--accent2)",cursor:"pointer" }} onClick={()=>setLegalModal("terms")}>이용약관</span> 및{" "}
-                    <span style={{ color:"var(--accent2)",cursor:"pointer" }} onClick={()=>setLegalModal("privacy")}>개인정보처리방침</span>에 동의합니다.
-                  </label>
+            : <div style={{ display:"flex",flexDirection:"column",gap:10,marginBottom:20 }}>
+                <div>
+                  <div style={{ display:"flex",alignItems:"flex-start",gap:10,marginBottom:errs.agreeTerms?4:0 }}>
+                    <input type="checkbox" id="agreeTerms" checked={form.agreeTerms} onChange={e=>set("agreeTerms",e.target.checked)} style={{ marginTop:2,accentColor:"var(--accent)",flexShrink:0 }} />
+                    <label htmlFor="agreeTerms" style={{ fontSize:12,color:"var(--text2)" }}>
+                      <span style={{ color:"var(--accent2)",cursor:"pointer" }} onClick={e=>{e.preventDefault();setLegalModal("terms");}}>이용약관</span>에 동의합니다.
+                    </label>
+                  </div>
+                  {errs.agreeTerms && <div className="form-err" style={{ marginTop:2 }}>{errs.agreeTerms}</div>}
                 </div>
-                {errs.agree && <div className="form-err" style={{ marginBottom:14 }}>{errs.agree}</div>}
+                <div>
+                  <div style={{ display:"flex",alignItems:"flex-start",gap:10,marginBottom:errs.agreePrivacy?4:0 }}>
+                    <input type="checkbox" id="agreePrivacy" checked={form.agreePrivacy} onChange={e=>set("agreePrivacy",e.target.checked)} style={{ marginTop:2,accentColor:"var(--accent)",flexShrink:0 }} />
+                    <label htmlFor="agreePrivacy" style={{ fontSize:12,color:"var(--text2)" }}>
+                      <span style={{ color:"var(--accent2)",cursor:"pointer" }} onClick={e=>{e.preventDefault();setLegalModal("privacy");}}>개인정보처리방침</span>에 동의합니다.
+                    </label>
+                  </div>
+                  {errs.agreePrivacy && <div className="form-err" style={{ marginTop:2 }}>{errs.agreePrivacy}</div>}
+                </div>
               </div>
           }
 

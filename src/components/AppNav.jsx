@@ -1,31 +1,36 @@
 import { useState } from "react";
 import Logo from "./Logo";
 import { toast } from "../utils/toast";
+import { useLang, NAV_TABS } from "../i18n";
 
-export default function AppNav({ tab, setTab, setPage }) {
+export default function AppNav({ tab, setTab, setPage, avatar }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { lang, t } = useLang();
+
   return (
     <nav className="app-nav">
       <div style={{ display:"flex",alignItems:"center",gap:20 }}>
         <Logo onClick={() => setPage("landing")} />
-        <span style={{ fontFamily:"var(--mono)",fontSize:11,color:"var(--text2)",letterSpacing:"0.06em" }}>다이렉트 P2P 프로젝트 편집</span>
+        <span style={{ fontFamily:"var(--mono)",fontSize:11,color:"var(--text2)",letterSpacing:"0.06em" }}>{t.navSubtitle}</span>
       </div>
       <div style={{ display:"flex",alignItems:"center" }}>
-        {["편집 툴","친구","시스템 설정","구독 플랜"].map(t => (
-          <button key={t} className={`app-tab${tab===t?" active":""}`} onClick={() => setTab(t)}>{t}</button>
+        {NAV_TABS.map(({ key, ko, en }) => (
+          <button key={key} className={`app-tab${tab===key?" active":""}`} onClick={() => setTab(key)}>
+            {lang === "en" ? en : ko}
+          </button>
         ))}
       </div>
       <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-        <div className="transfer-pill"><span className="transfer-dot" />영상 전송 중</div>
+        <div className="transfer-pill"><span className="transfer-dot" />{t.transferring}</div>
         <div style={{ position:"relative" }}>
-          <button className="avatar-btn" onClick={() => setMenuOpen(p => !p)}>ML</button>
+          <button className="avatar-btn" onClick={() => setMenuOpen(p => !p)}>{(avatar || "ML").slice(0,2).toUpperCase()}</button>
           {menuOpen && (
             <div className="avatar-menu" onMouseLeave={() => setMenuOpen(false)}>
-              <button className="avatar-menu-item" onClick={() => { setTab("프로필 편집"); setMenuOpen(false); }}>👤 프로필 편집</button>
-              <button className="avatar-menu-item" onClick={() => { setTab("시스템 설정"); setMenuOpen(false); }}>⚙ 설정</button>
-              <button className="avatar-menu-item" onClick={() => { setTab("구독 플랜"); setMenuOpen(false); }}>💳 구독 관리</button>
+              <button className="avatar-menu-item" onClick={() => { setTab("profile"); setMenuOpen(false); }}>{t.menuProfile}</button>
+              <button className="avatar-menu-item" onClick={() => { setTab("system"); setMenuOpen(false); }}>{t.menuSettings}</button>
+              <button className="avatar-menu-item" onClick={() => { setTab("payment"); setMenuOpen(false); }}>{t.menuSubscription}</button>
               <div style={{ height:1,background:"var(--border)",margin:"4px 0" }} />
-              <button className="avatar-menu-item danger" onClick={() => { toast("로그아웃되었습니다.", "warn"); setTimeout(() => setPage("landing"), 700); setMenuOpen(false); }}>↩ 로그아웃</button>
+              <button className="avatar-menu-item danger" onClick={() => { toast(t.toastLogout, "warn"); setTimeout(() => setPage("landing"), 700); setMenuOpen(false); }}>{t.menuLogout}</button>
             </div>
           )}
         </div>

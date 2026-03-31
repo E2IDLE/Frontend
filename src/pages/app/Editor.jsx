@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "../../utils/toast";
+import { useLang } from "../../i18n";
 
 export default function Editor() {
   const [playing, setPlaying] = useState(false);
@@ -13,6 +14,7 @@ export default function Editor() {
   const [bgRemove, setBgRemove] = useState(false);
   const [chroma, setChroma] = useState(true);
   const intervalRef = useRef(null);
+  const { t } = useLang();
 
   const files = [
     { name:"Scene_01_RAW.mov", size:"128 GB" },
@@ -49,16 +51,16 @@ export default function Editor() {
     <div className="editor-layout" style={{ flex:1,overflow:"hidden" }}>
       {/* Transfer sidebar */}
       <div className="transfer-sidebar">
-        <div style={{ padding:"14px 14px 0",fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:10 }}>// 프로젝트 파일</div>
+        <div style={{ padding:"14px 14px 0",fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:10 }}>{t.projectFiles}</div>
         {files.map((f,i) => (
-          <div key={f.name} className={`file-item${activeFile===i?" active":""}`} onClick={() => { setActiveFile(i); toast(`${f.name} 선택됨`, "info"); }}>
+          <div key={f.name} className={`file-item${activeFile===i?" active":""}`} onClick={() => { setActiveFile(i); toast(t.fileSelected(f.name), "info"); }}>
             <div className="file-name">{f.name}</div>
             <div className="file-size">{f.size}</div>
           </div>
         ))}
         <div style={{ padding:"12px 14px",borderBottom:"1px solid var(--border)" }}>
-          <div style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:10 }}>// 전송 상태</div>
-          {[["현재 속도","1.2 Gbps","green"],["지연 시간","15 ms",""],["남은 시간","18 분",""]].map(([k,v,c]) => (
+          <div style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:10 }}>{t.transferStatus}</div>
+          {[[t.currentSpeed,"1.2 Gbps","green"],[t.latency,"15 ms",""],[t.remaining,"18 min",""]].map(([k,v,c]) => (
             <div style={{ display:"flex",justifyContent:"space-between",marginBottom:7 }} key={k}>
               <span style={{ fontSize:11,color:"var(--text3)" }}>{k}</span>
               <span style={{ fontFamily:"var(--mono)",fontSize:11,color:c?"var(--green)":"var(--text)" }}>{v}</span>
@@ -69,13 +71,13 @@ export default function Editor() {
           </div>
           <div style={{ display:"flex",alignItems:"center",gap:6 }}>
             <span style={{ width:5,height:5,borderRadius:"50%",background:"var(--green)",display:"inline-block" }} />
-            <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)" }}>로컬 에이전트 연결됨</span>
+            <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)" }}>{t.agentConnected}</span>
           </div>
         </div>
         <div style={{ padding:"12px 14px",borderBottom:"1px solid var(--border)" }}>
-          <div style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:10 }}>// 노드 정보</div>
-          <div style={{ fontSize:12,color:"var(--text2)",marginBottom:2 }}>송신처: 촬영 현장 A</div>
-          <div style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
+          <div style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:10 }}>{t.nodeInfo}</div>
+          <div style={{ fontSize:12,color:"var(--text2)",marginBottom:2 }}>{t.sender}</div>
+          <div style={{ fontFamily:"var(--mono)",fontSize:10.5,color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
         </div>
       </div>
 
@@ -93,7 +95,7 @@ export default function Editor() {
               CLIP
             </div>
             <div className="preview-tc">{toTC(tcSec)}</div>
-            <div className="preview-badge">8K RAW · {playing?"재생 중":"일시정지"} {bgRemove?"· BG OFF":""}</div>
+            <div className="preview-badge">8K RAW · {playing ? t.playing : t.paused} {bgRemove ? "· BG OFF" : ""}</div>
           </div>
         </div>
 
@@ -107,9 +109,9 @@ export default function Editor() {
             <div className="tc-display">{toTC(tcSec)} / 00:05:00:00</div>
           </div>
           <div style={{ display:"flex",gap:12,alignItems:"center" }}>
-            <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)" }}>현재 컷 편집 및 프리뷰 가능</span>
+            <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)" }}>{t.editHint}</span>
             <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--accent2)" }}>Scale {scale}% · Rot {rot}°</span>
-            <button className="btn-sm" onClick={()=>{setScale(100);setRot(0);setOpac(100);setPosX(960);setPosY(540);toast("변환값이 초기화되었습니다.", "info");}}>초기화</button>
+            <button className="btn-sm" onClick={()=>{setScale(100);setRot(0);setOpac(100);setPosX(960);setPosY(540);toast(t.toastReset, "info");}}>{t.reset}</button>
           </div>
         </div>
 
@@ -117,25 +119,25 @@ export default function Editor() {
           <div className="tl-header">
             <span>Timeline_V1</span>
             <div style={{ display:"flex",gap:8 }}>
-              <button className="btn-sm" onClick={()=>toast("타임라인을 내보내는 중...", "info")}>내보내기</button>
+              <button className="btn-sm" onClick={()=>toast(t.toastExport, "info")}>{t.export}</button>
               <span style={{ color:"var(--accent2)" }}>V1</span>
             </div>
           </div>
           <div className="tl-ruler">
-            {["00:00:00","00:01:15","00:02:30","00:03:45"].map(t => (
-              <div className="ruler-tick" key={t}><span className="ruler-label">{t}</span></div>
+            {["00:00:00","00:01:15","00:02:30","00:03:45"].map(tc => (
+              <div className="ruler-tick" key={tc}><span className="ruler-label">{tc}</span></div>
             ))}
           </div>
           <div className="tl-tracks">
-            {[{ label:"V1", clip:files[activeFile].name }, { label:"A1", clip:null }].map(t => (
-              <div className="tl-track" key={t.label}>
-                <span className="track-label">{t.label}</span>
+            {[{ label:"V1", clip:files[activeFile].name }, { label:"A1", clip:null }].map(tr => (
+              <div className="tl-track" key={tr.label}>
+                <span className="track-label">{tr.label}</span>
                 <div className="track-body" onClick={e => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const pct = (e.clientX - rect.left) / rect.width;
                   setTcSec(pct * 5 * 60);
                 }}>
-                  {t.clip && <div className="track-clip">{t.clip}</div>}
+                  {tr.clip && <div className="track-clip">{tr.clip}</div>}
                   <div className="tl-head" style={{ left:`${headPct}%` }} />
                 </div>
               </div>
@@ -147,8 +149,8 @@ export default function Editor() {
       {/* Right panel */}
       <div className="right-panel">
         <div className="panel-section">
-          <div className="panel-label">// 변형 옵션 (TRANSFORM)</div>
-          <div style={{ marginBottom:10,fontSize:12,color:"var(--text2)" }}>편집 위치 (Position)</div>
+          <div className="panel-label">{t.transform}</div>
+          <div style={{ marginBottom:10,fontSize:12,color:"var(--text2)" }}>{t.position}</div>
           <div style={{ display:"flex",gap:6,marginBottom:4 }}>
             <div style={{ flex:1 }}>
               <input className="panel-input" type="number" value={posX} onChange={e=>setPosX(+e.target.value)} />
@@ -162,7 +164,7 @@ export default function Editor() {
         </div>
 
         <div className="panel-section">
-          <div className="panel-label">// 크기 / 회전</div>
+          <div className="panel-label">{t.sizeRotation}</div>
           <Row label="Scale" val={`${scale}%`} />
           <input type="range" className="slider" min="0" max="300" value={scale} onChange={e=>setScale(+e.target.value)} />
           <div style={{ marginTop:14 }} />
@@ -171,20 +173,18 @@ export default function Editor() {
         </div>
 
         <div className="panel-section">
-          <div className="panel-label">// 불투명도 (OPACITY)</div>
+          <div className="panel-label">{t.opacity}</div>
           <Row label="Opacity" val={`${opac}%`} />
           <input type="range" className="slider" min="0" max="100" value={opac} onChange={e=>setOpac(+e.target.value)} />
         </div>
 
-        
-
         <div className="panel-section">
-          <div className="panel-label">// 시스템</div>
+          <div className="panel-label">{t.systemPanel}</div>
           <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:10 }}>
             <span style={{ width:5,height:5,borderRadius:"50%",background:"var(--green)",display:"inline-block" }} />
-            <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)" }}>정상 작동 중 · 에이전트 v1.0.1</span>
+            <span style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)" }}>{t.systemOk}</span>
           </div>
-          <button className="btn-sm" style={{ width:"100%" }} onClick={()=>toast("시스템 진단 결과: 모든 노드 정상", "ok")}>시스템 진단</button>
+          <button className="btn-sm" style={{ width:"100%" }} onClick={()=>toast(t.toastSystemDiag, "ok")}>{t.systemDiag}</button>
         </div>
       </div>
     </div>

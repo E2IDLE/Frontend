@@ -1,16 +1,16 @@
 import { useState } from "react";
 import Modal from "../../components/Modal";
 import { toast } from "../../utils/toast";
+import { useLang } from "../../i18n";
 
-const ROLES = ["admin","editor","viewer"];
 const ITEMS_PER_PAGE = 4;
 
 const BASE_MEMBERS = [
-  { name:"김철수",      email:"chulsoo.k@mediagrid.p2p",  role:"촬영 감독",    location:"현장 A (서울)",   badge:"admin",  status:"active",  label:"전송 중", init:"ST" },
-  { name:"이영희",       email:"yh.lee@mediagrid.p2p",     role:"메인 에디터",   location:"편집실 B (부산)", badge:"editor", status:"idle",    label:"대기 중",      init:"JA" },
-  { name:"김가연",      email:"jimin.p@mediagrid.p2p",    role:"색보정 전문가", location:"본사 (인천)",    badge:"editor", status:"active",  label:"전송 중", init:"LA" },
-  { name:"김나연",email:"assist.a@mediagrid.p2p",  role:"어시스턴트",   location:"오프라인",       badge:"viewer", status:"offline", label:"접속 종료",    init:"AS" },
-  { name:"김다연",     email:"dk.kim@mediagrid.p2p",     role:"사운드 디자인", location:"원격 (대구)",    badge:"editor", status:"idle",    label:"대기 중",      init:"KD" },
+  { name:"김철수",  email:"chulsoo.k@mediagrid.p2p",  role:"촬영 감독",    location:"현장 A (서울)",   badge:"admin",  status:"active",  label:"active",  init:"ST" },
+  { name:"이영희",  email:"yh.lee@mediagrid.p2p",     role:"메인 에디터",   location:"편집실 B (부산)", badge:"editor", status:"idle",    label:"idle",    init:"JA" },
+  { name:"김가연",  email:"jimin.p@mediagrid.p2p",    role:"색보정 전문가", location:"본사 (인천)",    badge:"editor", status:"active",  label:"active",  init:"LA" },
+  { name:"김나연",  email:"assist.a@mediagrid.p2p",   role:"어시스턴트",   location:"오프라인",       badge:"viewer", status:"offline", label:"offline", init:"AS" },
+  { name:"김다연",  email:"dk.kim@mediagrid.p2p",     role:"사운드 디자인", location:"원격 (대구)",    badge:"editor", status:"idle",    label:"idle",    init:"KD" },
 ];
 
 const MEMBERS_VERSION = 2;
@@ -31,6 +31,12 @@ function saveMembers(members) {
 
 export default function TeamSettings() {
   const [members, setMembersRaw] = useState(loadMembers);
+  const [invite, setInvite] = useState("");
+  const [pg, setPg] = useState(1);
+  const [selected, setSelected] = useState(null);
+  const [detailModal, setDetailModal] = useState(null);
+  const { t } = useLang();
+
   const setMembers = (updater) => {
     setMembersRaw(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
@@ -38,58 +44,61 @@ export default function TeamSettings() {
       return next;
     });
   };
-  const [invite, setInvite] = useState("");
-  const [pg, setPg] = useState(1);
-  const [selected, setSelected] = useState(null);
-  const [detailModal, setDetailModal] = useState(null);
 
   const totalPages = Math.ceil(members.length / ITEMS_PER_PAGE);
   const visible = members.slice((pg-1)*ITEMS_PER_PAGE, pg*ITEMS_PER_PAGE);
 
+  const statusLabel = (label) => {
+    if (label === "active") return t.statusActive;
+    if (label === "idle") return t.statusIdle;
+    if (label === "offline") return t.statusOffline;
+    return label;
+  };
+
   const doInvite = () => {
-    if (!invite.includes("@")) { toast("올바른 이메일 주소를 입력하세요.", "err"); return; }
-    if (members.find(m=>m.email===invite)) { toast("이미 초대된 멤버입니다.", "warn"); return; }
-    const nm = { name:invite.split("@")[0], email:invite, role:"신규 멤버", location:"미정", badge:"viewer", status:"offline", label:"초대 전송됨", init:invite[0].toUpperCase() };
+    if (!invite.includes("@")) { toast(t.toastInvalidEmail, "err"); return; }
+    if (members.find(m=>m.email===invite)) { toast(t.toastAlreadyInvited, "warn"); return; }
+    const nm = { name:invite.split("@")[0], email:invite, role:t.newMemberRole, location:"—", badge:"viewer", status:"offline", label:"offline", init:invite[0].toUpperCase() };
     setMembers(p=>[...p,nm]);
-    toast(`${invite}에 초대 링크를 발송했습니다.`, "ok");
+    toast(t.toastInviteSent(invite), "ok");
     setInvite("");
     setPg(Math.ceil((members.length+1)/ITEMS_PER_PAGE));
   };
 
-  const remove = (email) => { setMembers(p=>p.filter(m=>m.email!==email)); toast("멤버가 제거되었습니다.", "warn"); setSelected(null); };
+  const remove = (email) => { setMembers(p=>p.filter(m=>m.email!==email)); toast(t.toastRemoved, "warn"); setSelected(null); };
 
   return (
     <div style={{ padding:24,flex:1 }}>
       {detailModal && (
-        <Modal title={detailModal.name} sub={`${detailModal.email}\n역할: ${detailModal.role}\n위치: ${detailModal.location}`} onClose={()=>setDetailModal(null)}>
-          <button className="btn-sm-blue" style={{width:"100%",marginBottom:8}} onClick={()=>{toast(`${detailModal.name}님에게 연결 신청을 보냈습니다.`,"ok");setDetailModal(null);}}>연결 신청</button>
-          {detailModal.badge!=="admin" && <button className="btn-sm-red" style={{width:"100%",marginBottom:12}} onClick={()=>{remove(detailModal.email);setDetailModal(null);}}>멤버 제거</button>}
+        <Modal title={detailModal.name} sub={t.modalSub(detailModal.email, detailModal.role, detailModal.location)} onClose={()=>setDetailModal(null)}>
+          <button className="btn-sm-blue" style={{width:"100%",marginBottom:8}} onClick={()=>{toast(t.toastConnectSent(detailModal.name),"ok");setDetailModal(null);}}>{t.connectBtn}</button>
+          {detailModal.badge!=="admin" && <button className="btn-sm-red" style={{width:"100%",marginBottom:12}} onClick={()=>{remove(detailModal.email);setDetailModal(null);}}>{t.removeBtn}</button>}
         </Modal>
       )}
 
       <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20 }}>
         <div>
-          <div style={{ fontFamily:"var(--display)",fontSize:22,fontWeight:800,letterSpacing:"-.02em",marginBottom:4 }}>친구</div>
-          <div style={{ fontSize:13,color:"var(--text2)" }}>총 {members.length}명의 멤버가 활성화되어 있습니다</div>
+          <div style={{ fontFamily:"var(--display)",fontSize:22,fontWeight:800,letterSpacing:"-.02em",marginBottom:4 }}>{t.friendsTitle}</div>
+          <div style={{ fontSize:13,color:"var(--text2)" }}>{t.friendsSubtitle(members.length)}</div>
         </div>
         <div style={{ display:"flex",gap:8 }}>
-          <button className="btn-sm" onClick={()=>{toast("보고서를 내보내는 중...", "info");setTimeout(()=>toast("team_report.csv 다운로드 완료.", "ok"),1500);}}>보고서 내보내기</button>
+          <button className="btn-sm" onClick={()=>{toast(t.toastExportingReport, "info");setTimeout(()=>toast(t.toastExportedReport, "ok"),1500);}}>{t.exportReport}</button>
         </div>
       </div>
 
       <div style={{ background:"var(--surface)",border:"1px solid var(--border)",borderRadius:6,padding:18,marginBottom:18 }}>
-        <div style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:6 }}>// 새로운 팀원 초대</div>
-        <div style={{ fontSize:13,color:"var(--text2)",marginBottom:10 }}>팀원을 초대하여 실시간 협업 환경을 구축하세요.</div>
+        <div style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)",letterSpacing:"0.1em",marginBottom:6 }}>{t.inviteSection}</div>
+        <div style={{ fontSize:13,color:"var(--text2)",marginBottom:10 }}>{t.inviteDesc}</div>
         <div style={{ display:"flex",gap:8 }}>
           <input className="invite-input" placeholder="email@directp2p.com" value={invite} onChange={e=>setInvite(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doInvite()} />
-          <button className="btn-sm-blue" onClick={doInvite}>팀원 초대</button>
+          <button className="btn-sm-blue" onClick={doInvite}>{t.inviteBtn}</button>
         </div>
       </div>
 
       <div style={{ display:"flex",gap:12,marginBottom:16,alignItems:"center" }}>
-        {[["var(--green)","전송 중",members.filter(m=>m.status==="active").length],["var(--yellow)","대기 중",members.filter(m=>m.status==="idle").length],["var(--text3)","오프라인",members.filter(m=>m.status==="offline").length]].map(([c,l,n])=>(
-          <div key={l} style={{ display:"flex",alignItems:"center",gap:6,fontFamily:"var(--mono)",fontSize:10,color:"var(--text2)",background:"var(--surface)",border:"1px solid var(--border)",padding:"5px 12px",borderRadius:2 }}>
-            <span style={{ width:6,height:6,borderRadius:"50%",background:c,display:"inline-block" }}/>{l} <strong>{n}</strong>
+        {[["var(--green)","active"],["var(--yellow)","idle"],["var(--text3)","offline"]].map(([c,status])=>(
+          <div key={status} style={{ display:"flex",alignItems:"center",gap:6,fontFamily:"var(--mono)",fontSize:11,color:"var(--text2)",background:"var(--surface)",border:"1px solid var(--border)",padding:"5px 12px",borderRadius:2 }}>
+            <span style={{ width:6,height:6,borderRadius:"50%",background:c,display:"inline-block" }}/>{statusLabel(status)} <strong>{members.filter(m=>m.status===status).length}</strong>
           </div>
         ))}
         <div style={{ marginLeft:"auto",fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)" }}>Last sync: Just now</div>
@@ -97,7 +106,7 @@ export default function TeamSettings() {
 
       <div style={{ background:"var(--surface)",border:"1px solid var(--border)",borderRadius:6,overflow:"hidden" }}>
         <table className="members-table">
-          <thead><tr><th>프로필</th><th>역할</th><th>접속 지점</th><th>권한 </th><th>작업 상태</th><th></th></tr></thead>
+          <thead><tr><th>{t.thProfile}</th><th>{t.thRole}</th><th>{t.thLocation}</th><th>{t.thPermission}</th><th>{t.thStatus}</th><th></th></tr></thead>
           <tbody>
             {visible.map(m => (
               <tr key={m.email} className={selected===m.email?"selected":""} onClick={()=>setSelected(m.email===selected?null:m.email)}>
@@ -118,19 +127,12 @@ export default function TeamSettings() {
                     onChange={e=>{
                       const next = e.target.value;
                       setMembers(p=>p.map(mb=>mb.email===m.email?{...mb,badge:next}:mb));
-                      toast(`${m.name}의 권한이 ${next}로 변경되었습니다.`, "ok");
+                      toast(t.toastPermChanged(m.name, next), "ok");
                     }}
                     style={{
-                      background:"var(--surface2)",
-                      border:"1px solid var(--border2)",
-                      color:"var(--text)",
-                      fontFamily:"var(--mono)",
-                      fontSize:11,
-                      padding:"5px 28px 5px 10px",
-                      borderRadius:4,
-                      cursor:"pointer",
-                      outline:"none",
-                      appearance:"auto",
+                      background:"var(--surface2)",border:"1px solid var(--border2)",
+                      color:"var(--text)",fontFamily:"var(--mono)",fontSize:11,
+                      padding:"5px 28px 5px 10px",borderRadius:4,cursor:"pointer",outline:"none",appearance:"auto",
                     }}
                   >
                     <option value="admin">Admin</option>
@@ -138,10 +140,10 @@ export default function TeamSettings() {
                     <option value="viewer">Viewer</option>
                   </select>
                 </td>
-                <td><div style={{ display:"flex",alignItems:"center",gap:5,fontSize:12 }}><span className={`status-dot ${m.status}`}/>{m.label}</div></td>
+                <td><div style={{ display:"flex",alignItems:"center",gap:5,fontSize:12 }}><span className={`status-dot ${m.status}`}/>{statusLabel(m.label)}</div></td>
                 <td onClick={e=>e.stopPropagation()}>
                   <div style={{ display:"flex",gap:4 }}>
-                    <button className="btn-sm-blue" onClick={()=>toast(`${m.name}님에게 연결 신청을 보냈습니다.`,"ok")}>연결 신청</button>
+                    <button className="btn-sm-blue" onClick={()=>toast(t.toastConnectSent(m.name),"ok")}>{t.connectBtn}</button>
                     {m.badge!=="admin" && <button className="btn-sm-red" onClick={()=>remove(m.email)}>✕</button>}
                   </div>
                 </td>
