@@ -62,7 +62,7 @@ export default function TeamSettings() {
     <div style={{ padding:24,flex:1 }}>
       {detailModal && (
         <Modal title={detailModal.name} sub={`${detailModal.email}\n역할: ${detailModal.role}\n위치: ${detailModal.location}`} onClose={()=>setDetailModal(null)}>
-          <button className="btn-sm" style={{width:"100%",marginBottom:8}} onClick={()=>{toast(`${detailModal.name}에게 메시지를 보냅니다.`,"info");setDetailModal(null);}}>메시지 보내기</button>
+          <button className="btn-sm-blue" style={{width:"100%",marginBottom:8}} onClick={()=>{toast(`${detailModal.name}님에게 연결 신청을 보냈습니다.`,"ok");setDetailModal(null);}}>연결 신청</button>
           {detailModal.badge!=="admin" && <button className="btn-sm-red" style={{width:"100%",marginBottom:12}} onClick={()=>{remove(detailModal.email);setDetailModal(null);}}>멤버 제거</button>}
         </Modal>
       )}
@@ -141,7 +141,7 @@ export default function TeamSettings() {
                 <td><div style={{ display:"flex",alignItems:"center",gap:5,fontSize:12 }}><span className={`status-dot ${m.status}`}/>{m.label}</div></td>
                 <td onClick={e=>e.stopPropagation()}>
                   <div style={{ display:"flex",gap:4 }}>
-                    <button className="btn-sm" onClick={()=>setDetailModal(m)}>상세</button>
+                    <button className="btn-sm-blue" onClick={()=>toast(`${m.name}님에게 연결 신청을 보냈습니다.`,"ok")}>연결 신청</button>
                     {m.badge!=="admin" && <button className="btn-sm-red" onClick={()=>remove(m.email)}>✕</button>}
                   </div>
                 </td>
