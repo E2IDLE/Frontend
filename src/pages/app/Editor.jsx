@@ -78,8 +78,6 @@ export default function Editor() {
           <div style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
         </div>
         <div style={{ display:"flex",flexDirection:"column",gap:6,padding:"12px 14px",marginTop:"auto",borderTop:"1px solid var(--border)" }}>
-          <button className="btn-sm" onClick={() => { toast("가상 드라이브에 마운트하는 중...", "info"); setTimeout(()=>toast("가상 드라이브 마운트 완료 ✓", "ok"),1500); }}>가상 드라이브로 마운트</button>
-          <button className="btn-sm" onClick={() => { toast("SHA-256 무결성 검증 중...", "info"); setTimeout(()=>toast("무결성 검증 완료 ✓  해시 일치", "ok"),2000); }}>무결성 검증 (SHA-256)</button>
           <button className="btn-sm-blue" onClick={() => { toast(`${files[activeFile].name} 타임라인에 추가됨`, "ok"); }}>미디어 가져오기</button>
         </div>
       </div>
@@ -181,18 +179,7 @@ export default function Editor() {
           <input type="range" className="slider" min="0" max="100" value={opac} onChange={e=>setOpac(+e.target.value)} />
         </div>
 
-        <div className="panel-section">
-          <div className="panel-label">// 배경 설정</div>
-          {[["배경 제거", bgRemove, setBgRemove], ["크로마키 선명도 조정", chroma, setChroma]].map(([lbl,val,setV]) => (
-            <div key={lbl} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
-              <span className="panel-key">{lbl}</span>
-              <label className="toggle">
-                <input type="checkbox" checked={val} onChange={e=>{setV(e.target.checked);toast(`${lbl} ${e.target.checked?"ON":"OFF"}`, "info");}} />
-                <span className="toggle-slider" />
-              </label>
-            </div>
-          ))}
-        </div>
+        
 
         <div className="panel-section">
           <div className="panel-label">// 시스템</div>

@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { toast } from "../../utils/toast";
 
+const SYS_VERSION = 1;
+
+function loadSys() {
+  try {
+    const raw = localStorage.getItem("sys_settings");
+    if (!raw) return null;
+    const { version, data } = JSON.parse(raw);
+    if (version !== SYS_VERSION) return null;
+    return data;
+  } catch { return null; }
+}
+
 export default function SystemSettings() {
-  const [bw, setBw] = useState(60);
-  const [savedBw, setSavedBw] = useState(60);
-  const [port, setPort] = useState("50042");
+  const saved = loadSys();
+  const [bw, setBw] = useState(saved?.bw ?? 60);
+  const [savedBw, setSavedBw] = useState(saved?.bw ?? 60);
+  const [port, setPort] = useState(saved?.port ?? "50042");
   const [portStatus, setPortStatus] = useState(null);
   const [logs, setLogs] = useState([
     { time:"14:22:15", user:"김태우 (Admin)",   file:"Project_Alpha_V04.mxf",  status:"ok" },
@@ -20,7 +33,11 @@ export default function SystemSettings() {
     setTimeout(() => { setPortStatus("ok"); toast(`포트 ${port} 연결 가능 ✓`, "ok"); }, 1400);
   };
 
-  const save = () => { setSavedBw(bw); toast(`설정 저장 완료 — 대역폭 ${(bw*.1).toFixed(1)} Gbps, 포트 ${port}`, "ok"); };
+  const save = () => {
+    setSavedBw(bw);
+    localStorage.setItem("sys_settings", JSON.stringify({ version: SYS_VERSION, data: { bw, port } }));
+    toast(`설정 저장 완료 — 대역폭 ${(bw*.1).toFixed(1)} Gbps, 포트 ${port}`, "ok");
+  };
   const cancel = () => { setBw(savedBw); setPortStatus(null); toast("변경 사항이 취소되었습니다.", "warn"); };
   const exportLogs = () => { toast("로그 내보내는 중...", "info"); setTimeout(()=>toast("transfer_log.csv 다운로드 완료.", "ok"),1500); };
   const retryFailed = () => {

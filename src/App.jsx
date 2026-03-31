@@ -8,8 +8,12 @@ import Auth from "./pages/Auth";
 import AppShell from "./pages/app/AppShell";
 
 export default function App() {
-  const [page, setPage] = useState("landing");
+  const [page, setPageState] = useState("landing");
   const toasts = useToasts();
+
+  const setPage = (p) => { window.scrollTo(0, 0); setPageState(p); };
+
+  
   return (
     <>
       <style>{globalCss}</style>

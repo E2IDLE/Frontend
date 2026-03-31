@@ -5,15 +5,39 @@ import { toast } from "../../utils/toast";
 const ROLES = ["admin","editor","viewer"];
 const ITEMS_PER_PAGE = 4;
 
+const BASE_MEMBERS = [
+  { name:"김철수",      email:"chulsoo.k@mediagrid.p2p",  role:"촬영 감독",    location:"현장 A (서울)",   badge:"admin",  status:"active",  label:"전송 중", init:"ST" },
+  { name:"이영희",       email:"yh.lee@mediagrid.p2p",     role:"메인 에디터",   location:"편집실 B (부산)", badge:"editor", status:"idle",    label:"대기 중",      init:"JA" },
+  { name:"김가연",      email:"jimin.p@mediagrid.p2p",    role:"색보정 전문가", location:"본사 (인천)",    badge:"editor", status:"active",  label:"전송 중", init:"LA" },
+  { name:"김나연",email:"assist.a@mediagrid.p2p",  role:"어시스턴트",   location:"오프라인",       badge:"viewer", status:"offline", label:"접속 종료",    init:"AS" },
+  { name:"김다연",     email:"dk.kim@mediagrid.p2p",     role:"사운드 디자인", location:"원격 (대구)",    badge:"editor", status:"idle",    label:"대기 중",      init:"KD" },
+];
+
+const MEMBERS_VERSION = 2;
+
+function loadMembers() {
+  try {
+    const raw = localStorage.getItem("team_members");
+    if (!raw) return BASE_MEMBERS;
+    const { version, data } = JSON.parse(raw);
+    if (version !== MEMBERS_VERSION) return BASE_MEMBERS;
+    return data;
+  } catch { return BASE_MEMBERS; }
+}
+
+function saveMembers(members) {
+  localStorage.setItem("team_members", JSON.stringify({ version: MEMBERS_VERSION, data: members }));
+}
+
 export default function TeamSettings() {
-  const base = [
-    { name:"김철수",      email:"chulsoo.k@mediagrid.p2p",  role:"촬영 감독",    location:"현장 A (서울)",   badge:"admin",  status:"active",  label:"현재 편집 중", init:"ST" },
-    { name:"이영희",       email:"yh.lee@mediagrid.p2p",     role:"메인 에디터",   location:"편집실 B (부산)", badge:"editor", status:"idle",    label:"대기 중",      init:"JA" },
-    { name:"김가연",      email:"jimin.p@mediagrid.p2p",    role:"색보정 전문가", location:"본사 (인천)",    badge:"editor", status:"active",  label:"현재 편집 중", init:"LA" },
-    { name:"김나연",email:"assist.a@mediagrid.p2p",  role:"어시스턴트",   location:"오프라인",       badge:"viewer", status:"offline", label:"접속 종료",    init:"AS" },
-    { name:"김다연",     email:"dk.kim@mediagrid.p2p",     role:"사운드 디자인", location:"원격 (대구)",    badge:"editor", status:"idle",    label:"대기 중",      init:"KD" },
-  ];
-  const [members, setMembers] = useState(base);
+  const [members, setMembersRaw] = useState(loadMembers);
+  const setMembers = (updater) => {
+    setMembersRaw(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveMembers(next);
+      return next;
+    });
+  };
   const [invite, setInvite] = useState("");
   const [pg, setPg] = useState(1);
   const [selected, setSelected] = useState(null);
@@ -45,7 +69,7 @@ export default function TeamSettings() {
 
       <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20 }}>
         <div>
-          <div style={{ fontFamily:"var(--display)",fontSize:22,fontWeight:800,letterSpacing:"-.02em",marginBottom:4 }}>팀 관리</div>
+          <div style={{ fontFamily:"var(--display)",fontSize:22,fontWeight:800,letterSpacing:"-.02em",marginBottom:4 }}>친구</div>
           <div style={{ fontSize:13,color:"var(--text2)" }}>총 {members.length}명의 멤버가 활성화되어 있습니다</div>
         </div>
         <div style={{ display:"flex",gap:8 }}>
@@ -63,7 +87,7 @@ export default function TeamSettings() {
       </div>
 
       <div style={{ display:"flex",gap:12,marginBottom:16,alignItems:"center" }}>
-        {[["var(--green)","편집 중",members.filter(m=>m.status==="active").length],["var(--yellow)","대기 중",members.filter(m=>m.status==="idle").length],["var(--text3)","오프라인",members.filter(m=>m.status==="offline").length]].map(([c,l,n])=>(
+        {[["var(--green)","전송 중",members.filter(m=>m.status==="active").length],["var(--yellow)","대기 중",members.filter(m=>m.status==="idle").length],["var(--text3)","오프라인",members.filter(m=>m.status==="offline").length]].map(([c,l,n])=>(
           <div key={l} style={{ display:"flex",alignItems:"center",gap:6,fontFamily:"var(--mono)",fontSize:10,color:"var(--text2)",background:"var(--surface)",border:"1px solid var(--border)",padding:"5px 12px",borderRadius:2 }}>
             <span style={{ width:6,height:6,borderRadius:"50%",background:c,display:"inline-block" }}/>{l} <strong>{n}</strong>
           </div>

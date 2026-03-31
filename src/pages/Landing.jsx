@@ -1,15 +1,26 @@
+import { useEffect } from "react";
 import PubNav from "../components/PubNav";
 import PubFooter from "../components/PubFooter";
 import { toast } from "../utils/toast";
 
 export default function Landing({ setPage }) {
+  useEffect(() => {
+    const els = document.querySelectorAll(".fade-in");
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); observer.unobserve(e.target); } }),
+      { threshold: 0.12 }
+    );
+    els.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="page">
       <PubNav setPage={setPage} />
       <div className="hero" style={{alignItems:"center", textAlign:"center"}}>
         <div className="hero-grid" /><div className="hero-glow" />
         <div className="hero-badge"><span className="badge-dot" /> New Release — 8K RAW Streaming Engine V2.0</div>
-        <h1 className="hero-title">가장 빠른 8K<br />영상 협업의 <em>시작</em>,<br />DirectP2P</h1>
+        <h1 className="hero-title">가장 빠른 8K<br />영상 협업의 시작,<br /><em>DirectP2P</em></h1>
         <p className="hero-desc">중앙 서버 없는 혁신적인 P2P 아키텍처로 8K RAW 영상을 끊김 없이 스트리밍하고 전송하세요. QUIC 프로토콜 기반의 초저지연 기술이 편집 워크플로우를 재정의합니다.</p>
         <div className="hero-actions">
           <button className="btn-cta" onClick={() => setPage("signup")}>무료로 시작하기</button>
@@ -23,16 +34,16 @@ export default function Landing({ setPage }) {
         </div>
       </div>
 
-      <div style={{ padding:"100px 48px", textAlign:"center" }}>
+      <div className="fade-in" style={{ padding:"100px 48px", textAlign:"center" }}>
         <div className="section-label">// CORE TECHNOLOGY</div>
         <h2 className="section-title" style={{maxWidth:"100%"}}>프로페셔널을 위한<br />정밀한 성능</h2>
         <div className="features-grid">
           {[
-            { icon:"⚡", metric:"1.2 Gbps", title:"P2P Speed", desc:"전용 회선급의 압도적인 속도. 중앙 서버의 병목 현상 없이 유저 간 다이렉트 연결로 8K 대용량 파일을 수초 내에 전송합니다.", action:() => toast("P2P 속도 벤치마크 문서로 이동합니다.", "info") },
-            { icon:"▶", metric:"Edit-while", title:"Streaming", desc:"QUIC 프로토콜 최적화로 다운로드 완료 전에도 즉시 타임라인에서 프리뷰가 가능합니다. 실시간 프록시 생성 없는 8K 네이티브 편집.", action:() => { toast("데모 영상을 불러오는 중...", "info"); setTimeout(() => setPage("editor"), 900); } },
-            { icon:"🔒", metric:"AES-256", title:"Security", desc:"엔드 투 엔드 암호화로 원본 소스의 유출을 원천 차단합니다. 그 어떤 노드나 서버도 데이터의 내용을 볼 수 없는 완벽한 보안.", action:() => toast("보안 백서(White Paper)를 다운로드합니다.", "info") },
+            { icon:"⚡", metric:"1.2 Gbps", title:"P2P Speed", desc:"전용 회선급의 압도적인 속도. 중앙 서버의 병목 현상 없이 유저 간 다이렉트 연결로 8K 대용량 파일을 수초 내에 전송합니다." },
+            { icon:"▶", metric:"Edit-while", title:"Streaming", desc:"QUIC 프로토콜 최적화로 다운로드 완료 전에도 즉시 타임라인에서 프리뷰가 가능합니다. 실시간 프록시 생성 없는 8K 네이티브 편집." },
+            { icon:"🔒", metric:"AES-256", title:"Security", desc:"엔드 투 엔드 암호화로 원본 소스의 유출을 원천 차단합니다. 그 어떤 노드나 서버도 데이터의 내용을 볼 수 없는 완벽한 보안."},
           ].map(f => (
-            <div className="feature-card" key={f.title} onClick={f.action}>
+            <div className="feature-card" key={f.title} >
               <div className="feature-icon">{f.icon}</div>
               <div className="feature-metric">{f.metric}</div>
               <div className="feature-title">{f.title}</div>
@@ -42,15 +53,15 @@ export default function Landing({ setPage }) {
         </div>
       </div>
 
-      <div className="expand-section">
+      <div className="expand-section fade-in">
         <div className="expand-grid">
           <div>
             <div className="section-label">// GLOBAL WORKFLOW</div>
             <h2 className="section-title" style={{ marginBottom:32 }}>당신의 워크스테이션을<br />글로벌로 확장하세요</h2>
             {[
-              { title:"원격 컬러 그레이딩", desc:"지연 없는 10-bit HDR 스트리밍으로 전 세계 어디서든 실시간 컨펌이 가능합니다.", action:() => toast("원격 컬러 그레이딩 가이드를 불러옵니다.", "info") },
-              { title:"분산형 렌더링 지원", desc:"유휴 자원을 활용한 분산 렌더링으로 작업 시간을 70% 이상 단축합니다.", action:() => toast("분산 렌더링 설정 방법을 확인합니다.", "info") },
-              { title:"Live Syncing", desc:"실시간 프로젝트 동기화로 팀 전원이 동일한 타임라인을 공유합니다.", action:() => { toast("Live Sync 데모로 이동합니다.", "info"); setTimeout(()=>setPage("editor"),900); } },
+              { title:"원격 컬러 그레이딩", desc:"지연 없는 10-bit HDR 스트리밍으로 전 세계 어디서든 실시간 컨펌이 가능합니다."},
+              { title:"분산형 렌더링 지원", desc:"유휴 자원을 활용한 분산 렌더링으로 작업 시간을 70% 이상 단축합니다." },
+              { title:"Live Syncing", desc:"실시간 프로젝트 동기화로 팀 전원이 동일한 타임라인을 공유합니다." },
             ].map((item, i) => (
               <div className="expand-item" key={item.title} onClick={item.action}>
                 <span className="expand-num">0{i+1}</span>
@@ -72,7 +83,7 @@ export default function Landing({ setPage }) {
         </div>
       </div>
 
-      <div style={{ padding:"120px 48px",textAlign:"center",position:"relative",overflow:"hidden" }}>
+      <div className="fade-in" style={{ padding:"120px 48px",textAlign:"center",position:"relative",overflow:"hidden" }}>
         <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:400,background:"radial-gradient(ellipse,rgba(37,99,235,.1) 0%,transparent 70%)",pointerEvents:"none" }} />
         <h2 style={{ fontFamily:"var(--display)",fontSize:"clamp(32px,5vw,56px)",fontWeight:800,letterSpacing:"-.02em",marginBottom:16,position:"relative",zIndex:1 }}>지금 바로 8K 협업을<br />시작하세요</h2>
         <p style={{ fontSize:15,color:"var(--text2)",marginBottom:36,position:"relative",zIndex:1 }}>첫 30일간 모든 프리미엄 기능을 무제한으로 제공합니다.</p>

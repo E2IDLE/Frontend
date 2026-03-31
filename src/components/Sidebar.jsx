@@ -15,8 +15,8 @@ export default function Sidebar({ tab, setTab }) {
       <div style={{ height:1,background:"var(--border)",margin:"6px 10px" }} />
       <div style={{ padding:"8px 10px" }}>
         <div className="sidebar-label">현재 활동 상태</div>
-        <div className="sidebar-item" onClick={() => toast("편집 중인 멤버 목록을 확인합니다.", "info")}>
-          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ color:"var(--green)" }}>●</span>편집 중</div>
+        <div className="sidebar-item" onClick={() => toast("전송 중인 멤버 목록을 확인합니다.", "info")}>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ color:"var(--green)" }}>●</span>전송 중</div>
           <span className="sidebar-badge">04</span>
         </div>
         <div className="sidebar-item" onClick={() => toast("대기 중인 멤버를 확인합니다.", "info")}>
@@ -27,10 +27,10 @@ export default function Sidebar({ tab, setTab }) {
       <div style={{ height:1,background:"var(--border)",margin:"6px 10px" }} />
       <div style={{ padding:"8px 10px" }}>
         <div className="sidebar-label">NAVIGATE</div>
-        {["팀 설정","시스템 설정","구독 플랜"].map(t => (
+        {["친구","시스템 설정","구독 플랜"].map(t => (
           <div key={t} className={`sidebar-item${tab===t?" active":""}`} onClick={() => setTab(t)}>
             <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-              <span>{t==="팀 설정"?"👥":t==="시스템 설정"?"⚙":"💳"}</span>{t}
+              <span>{t==="친구"?"👥":t==="시스템 설정"?"⚙":"💳"}</span>{t}
             </div>
           </div>
         ))}
