@@ -20,12 +20,12 @@ export default function SystemSettings() {
   const [savedBw, setSavedBw] = useState(saved?.bw ?? 60);
   const [port, setPort] = useState(saved?.port ?? "50042");
   const [portStatus, setPortStatus] = useState(null);
-  const [logs, setLogs] = useState([
+  const logs = [
     { time:"14:22:15", user:"김태우 (Admin)",   file:"Project_Alpha_V04.mxf",  status:"ok" },
     { time:"13:45:02", user:"이소민 (Editor)",   file:"Raw_Footage_0824.zip",   status:"ok" },
     { time:"12:10:33", user:"정민규 (VFX)",      file:"Comp_Final_V2.exr",      status:"fail" },
     { time:"11:05:19", user:"김태우 (Admin)",    file:"Client_Review_H264.mp4", status:"ok" },
-  ]);
+  ];
   const { t } = useLang();
 
   const verifyPort = () => {
@@ -41,11 +41,6 @@ export default function SystemSettings() {
     toast(t.toastSettingsSaved((bw*.1).toFixed(1), port), "ok");
   };
   const cancel = () => { setBw(savedBw); setPortStatus(null); toast(t.toastSettingsCancelled, "warn"); };
-  const exportLogs = () => { toast(t.toastExportingLogs, "info"); setTimeout(()=>toast(t.toastLogsExported, "ok"),1500); };
-  const retryFailed = () => {
-    setLogs(p=>p.map(l=>l.status==="fail"?{...l,status:"ok"}:l));
-    toast(t.toastRetried, "ok");
-  };
 
   return (
     <div style={{ padding:24,flex:1 }}>
@@ -77,12 +72,8 @@ export default function SystemSettings() {
       </div>
 
       <div className="settings-card">
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
+        <div style={{ marginBottom:16 }}>
           <div style={{ fontFamily:"var(--display)",fontSize:14,fontWeight:700 }}>{t.logMgmt}</div>
-          <div style={{ display:"flex",gap:8 }}>
-            {logs.some(l=>l.status==="fail") && <button className="btn-sm" onClick={retryFailed}>{t.retryFailed}</button>}
-            <button className="btn-sm" onClick={exportLogs}>{t.exportLogs}</button>
-          </div>
         </div>
         <table className="log-table">
           <thead><tr><th>{t.thTime}</th><th>{t.thUser}</th><th>{t.thFile}</th><th>{t.thLogStatus}</th></tr></thead>

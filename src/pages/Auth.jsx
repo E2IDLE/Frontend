@@ -2,6 +2,7 @@ import { useState } from "react";
 import PubNav from "../components/PubNav";
 import FormField from "../components/FormField";
 import { toast } from "../utils/toast";
+import { apiFetch, setToken } from "../utils/api";
 
 const LEGAL = {
   terms: {
@@ -135,15 +136,62 @@ export default function Auth({ mode, setPage }) {
     return e;
   };
 
-  const submit = () => {
+  const submit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrs(e); return; }
     setLoading(true);
+
+    // TODO: 서버 준비 완료 후 아래 모킹 제거 및 실제 API 블록 주석 해제
     setTimeout(() => {
       setLoading(false);
-      toast(isLogin ? "로그인 성공! 워크스페이스로 이동합니다." : "계정이 생성되었습니다! 환영합니다 🎉", "ok");
-      setTimeout(() => setPage("editor"), 700);
+      if (isLogin) {
+        setToken("mock-token");
+        toast("로그인 성공! 워크스페이스로 이동합니다.", "ok");
+        setTimeout(() => setPage("editor"), 700);
+      } else {
+        toast("계정이 생성되었습니다! 로그인 해주세요.", "ok");
+        setTimeout(() => setPage("login"), 700);
+      }
     }, 1300);
+
+    // --- 실제 API 연동 (서버 준비 후 위 모킹 제거 후 주석 해제) ---
+    // try {
+    //   if (isLogin) {
+    //     const res = await apiFetch("/auth/login", {
+    //       method: "POST",
+    //       body: JSON.stringify({ email: form.email, password: form.pw }),
+    //     });
+    //     if (res.status === 200) {
+    //       const data = await res.json();
+    //       setToken(data.token ?? data.accessToken ?? data.access_token ?? "");
+    //       toast("로그인 성공! 워크스페이스로 이동합니다.", "ok");
+    //       setTimeout(() => setPage("editor"), 700);
+    //     } else if (res.status === 401) {
+    //       toast("이메일 또는 비밀번호가 올바르지 않습니다.", "err");
+    //     } else {
+    //       toast("서버에 연결할 수 없습니다.", "err");
+    //     }
+    //   } else {
+    //     const res = await apiFetch("/auth/register", {
+    //       method: "POST",
+    //       body: JSON.stringify({ email: form.email, password: form.pw, nickname: form.nick || form.name }),
+    //     });
+    //     if (res.status === 201) {
+    //       toast("계정이 생성되었습니다! 로그인 해주세요.", "ok");
+    //       setTimeout(() => setPage("login"), 700);
+    //     } else if (res.status === 400) {
+    //       toast("입력값을 확인해주세요.", "err");
+    //     } else if (res.status === 409) {
+    //       toast("이미 사용 중인 이메일입니다.", "err");
+    //     } else {
+    //       toast("서버에 연결할 수 없습니다.", "err");
+    //     }
+    //   }
+    // } catch (err) {
+    //   toast("서버에 연결할 수 없습니다.", "err");
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (

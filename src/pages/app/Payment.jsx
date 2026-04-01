@@ -134,7 +134,7 @@ export default function Payment() {
   const { t } = useLang();
 
   const plans = [
-    { id:"pro",  name:"Pro",  sub:t.planProSub,  price:"$49", features:["Unlimited 8K RAW transfer","10 team members","24/7 support"], rec:true },
+    { id:"pro",  name:"Pro",  sub:t.planProSub,  price:"$70", features:["Unlimited 8K RAW transfer","10 team members","24/7 support"], rec:true },
     { id:"free", name:"Free", sub:t.planFreeSub, price:"$0",  features:["100GB transfer","standard speed","2 team members"],           rec:false },
   ];
   const totals = { pro:{ sub:"$49.00",tax:"$4.90",total:"$53.90" }, free:{ sub:"$0.00",tax:"$0.00",total:"$0.00" } };

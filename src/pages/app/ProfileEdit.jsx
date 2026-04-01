@@ -12,7 +12,7 @@ const DEFAULTS = {
     language: "ko",
     avatar: "ML",
   },
-  skills: ["영상 편집", "색보정"],
+  skills: [0, 2],
   notifications: {
     transferComplete: true,
     teamInvite: true,
@@ -22,20 +22,21 @@ const DEFAULTS = {
 };
 
 const PROFILE_VERSION = 1;
+const SKILLS_VERSION = 2;
 
-function load(key, fallback) {
+function load(key, fallback, version = PROFILE_VERSION) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
-    const { version, data } = JSON.parse(raw);
-    if (version !== PROFILE_VERSION) return fallback;
-    return data;
+    const parsed = JSON.parse(raw);
+    if (parsed.version !== version) return fallback;
+    return parsed.data;
   } catch { return fallback; }
 }
 
 export default function ProfileEdit({ onAvatarChange, onLangChange }) {
   const [form, setForm] = useState(() => load("profile_form", DEFAULTS.form));
-  const [selectedSkills, setSelectedSkills] = useState(() => load("profile_skills", DEFAULTS.skills));
+  const [selectedSkills, setSelectedSkills] = useState(() => load("profile_skills", DEFAULTS.skills, SKILLS_VERSION));
   const [notifications, setNotifications] = useState(() => load("profile_notifications", DEFAULTS.notifications));
   const [saving, setSaving] = useState(false);
   const [avatarInput, setAvatarInput] = useState("");
@@ -49,15 +50,15 @@ export default function ProfileEdit({ onAvatarChange, onLangChange }) {
     });
   };
 
-  const toggleSkill = (s) => {
-    setSelectedSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
+  const toggleSkill = (i) => {
+    setSelectedSkills(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]);
   };
 
   const handleSave = () => {
     setSaving(true);
     setTimeout(() => {
       localStorage.setItem("profile_form", JSON.stringify({ version: PROFILE_VERSION, data: form }));
-      localStorage.setItem("profile_skills", JSON.stringify({ version: PROFILE_VERSION, data: selectedSkills }));
+      localStorage.setItem("profile_skills", JSON.stringify({ version: SKILLS_VERSION, data: selectedSkills }));
       localStorage.setItem("profile_notifications", JSON.stringify({ version: PROFILE_VERSION, data: notifications }));
       setSaving(false);
       onAvatarChange?.(form.avatar);
@@ -174,16 +175,16 @@ export default function ProfileEdit({ onAvatarChange, onLangChange }) {
       <div className="settings-card" style={{ marginBottom: 20 }}>
         <div className="panel-label" style={{ marginBottom: 16 }}>{t.skillCard}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {t.skills.map(s => (
+          {t.skills.map((s, i) => (
             <button
-              key={s}
-              onClick={() => toggleSkill(s)}
+              key={i}
+              onClick={() => toggleSkill(i)}
               style={{
                 fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".06em",
                 padding: "5px 12px", borderRadius: 3, cursor: "pointer", transition: "all .15s",
-                border: selectedSkills.includes(s) ? "1px solid var(--accent)" : "1px solid var(--border)",
-                background: selectedSkills.includes(s) ? "rgba(37,99,235,.12)" : "none",
-                color: selectedSkills.includes(s) ? "var(--accent2)" : "var(--text3)",
+                border: selectedSkills.includes(i) ? "1px solid var(--accent)" : "1px solid var(--border)",
+                background: selectedSkills.includes(i) ? "rgba(37,99,235,.12)" : "none",
+                color: selectedSkills.includes(i) ? "var(--accent2)" : "var(--text3)",
               }}
             >{s}</button>
           ))}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import Modal from "../../components/Modal";
 import { toast } from "../../utils/toast";
 import { useLang } from "../../i18n";
+// import { apiFetch } from "../../utils/api"; // TODO: 서버 준비 후 주석 해제
 
 const ITEMS_PER_PAGE = 4;
 
@@ -27,6 +28,26 @@ function loadMembers() {
 
 function saveMembers(members) {
   localStorage.setItem("team_members", JSON.stringify({ version: MEMBERS_VERSION, data: members }));
+}
+
+async function sendConnectionRequest(targetEmail, name, t) {
+  // TODO: 서버 준비 후 아래 더미 제거 및 실제 API 블록 주석 해제
+  toast(t.toastSessionCreated, "ok");
+
+  // --- 실제 API 연동 ---
+  // try {
+  //   const res = await apiFetch("/sessions", {
+  //     method: "POST",
+  //     body: JSON.stringify({ targetEmail }),
+  //   });
+  //   if (res.status === 201 || res.status === 200) {
+  //     toast(t.toastSessionCreated, "ok");
+  //   } else {
+  //     toast(t.toastNetworkError, "err");
+  //   }
+  // } catch {
+  //   toast(t.toastNetworkError, "err");
+  // }
 }
 
 export default function TeamSettings() {
@@ -71,7 +92,7 @@ export default function TeamSettings() {
     <div style={{ padding:24,flex:1 }}>
       {detailModal && (
         <Modal title={detailModal.name} sub={t.modalSub(detailModal.email, detailModal.role, detailModal.location)} onClose={()=>setDetailModal(null)}>
-          <button className="btn-sm-blue" style={{width:"100%",marginBottom:8}} onClick={()=>{toast(t.toastConnectSent(detailModal.name),"ok");setDetailModal(null);}}>{t.connectBtn}</button>
+          <button className="btn-sm-blue" style={{width:"100%",marginBottom:8}} onClick={()=>{sendConnectionRequest(detailModal.email,detailModal.name,t);setDetailModal(null);}}>{t.connectBtn}</button>
           {detailModal.badge!=="admin" && <button className="btn-sm-red" style={{width:"100%",marginBottom:12}} onClick={()=>{remove(detailModal.email);setDetailModal(null);}}>{t.removeBtn}</button>}
         </Modal>
       )}
@@ -143,7 +164,7 @@ export default function TeamSettings() {
                 <td><div style={{ display:"flex",alignItems:"center",gap:5,fontSize:12 }}><span className={`status-dot ${m.status}`}/>{statusLabel(m.label)}</div></td>
                 <td onClick={e=>e.stopPropagation()}>
                   <div style={{ display:"flex",gap:4 }}>
-                    <button className="btn-sm-blue" onClick={()=>toast(t.toastConnectSent(m.name),"ok")}>{t.connectBtn}</button>
+                    <button className="btn-sm-blue" onClick={()=>sendConnectionRequest(m.email,m.name,t)}>{t.connectBtn}</button>
                     {m.badge!=="admin" && <button className="btn-sm-red" onClick={()=>remove(m.email)}>✕</button>}
                   </div>
                 </td>

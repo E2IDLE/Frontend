@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/KISIA/Desktop/S-개발자/p2p/media-grid-app -name *.css -type f)"
+    ]
+  }
+}

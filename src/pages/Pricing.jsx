@@ -26,7 +26,7 @@ export default function Pricing({ setPage }) {
         </div>
         <div className="plan-card rec">
           <div className="plan-rec-badge">RECOMMENDED</div>
-          <div className="plan-name">PRO</div><div className="plan-price">$49</div><div className="plan-period">/month</div>
+          <div className="plan-name">PRO</div><div className="plan-price">$70</div><div className="plan-period">/month</div>
           <ul className="plan-features">{["무제한 8K RAW 전송","Priority QUIC Stream (초고속)","최대 10명의 팀원 협업","24/7 전담 기술 지원","커스텀 브랜딩 링크"].map(f=><li className="plan-feature" key={f}><span className="plan-check">✓</span>{f}</li>)}</ul>
           <button className="plan-btn pro" onClick={() => setPage("signup")}>Pro 선택하기</button>
         </div>
