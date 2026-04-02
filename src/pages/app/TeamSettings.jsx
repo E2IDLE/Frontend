@@ -2,6 +2,55 @@ import { useState, useEffect } from "react";
 import { toast } from "../../utils/toast";
 import { apiFetch, agentCall } from "../../utils/api";
 
+async function requestConnect(peer) {
+  try {
+    const res = await apiFetch("/sessions", {
+      method: "POST",
+      body: JSON.stringify({ peerId: peer.peerId }),
+    });
+    if (res.ok) {
+      toast("연결 신청을 보냈습니다.", "ok");
+    } else {
+      toast("연결 신청에 실패했습니다.", "err");
+    }
+  } catch {
+    toast("에이전트에 연결할 수 없습니다.", "err");
+  }
+}
+
+function TransferStatus({ status, connectionType, isMe }) {
+  if (isMe) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+        <span className="status-dot active" />
+        전송 중
+      </div>
+    );
+  }
+  if (status === "connected" && connectionType) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+        <span className="status-dot active" />
+        전송 중
+      </div>
+    );
+  }
+  if (status === "connected") {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+        <span className="status-dot idle" />
+        대기 중
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+      <span className="status-dot offline" />
+      접속 종료
+    </div>
+  );
+}
+
 export default function TeamSettings() {
   const [me, setMe] = useState(null);
   const [peers, setPeers] = useState([]);
@@ -48,14 +97,12 @@ export default function TeamSettings() {
 
   return (
     <div style={{ padding: 24, flex: 1 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontFamily: "var(--display)", fontSize: 22, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 4 }}>
-            팀 설정
-          </div>
-          <div style={{ fontSize: 13, color: "var(--text2)" }}>
-            총 {totalCount}명
-          </div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: "var(--display)", fontSize: 22, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 4 }}>
+          팀 설정
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text2)" }}>
+          총 {totalCount}명
         </div>
       </div>
 
@@ -76,10 +123,9 @@ export default function TeamSettings() {
               <thead>
                 <tr>
                   <th>프로필</th>
-                  <th>연결 유형</th>
-                  <th>상태</th>
-                  <th>RTT</th>
-                  <th>IP</th>
+                  <th>권한</th>
+                  <th>전송 상태</th>
+                  <th>연결 신청</th>
                 </tr>
               </thead>
               <tbody>
@@ -112,15 +158,9 @@ export default function TeamSettings() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ color: "var(--text3)" }}>—</td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
-                        <span className="status-dot active" />
-                        connected
-                      </div>
-                    </td>
-                    <td style={{ color: "var(--text3)" }}>—</td>
-                    <td style={{ color: "var(--text3)" }}>—</td>
+                    <td><span className="role-badge admin">Admin</span></td>
+                    <td><TransferStatus isMe /></td>
+                    <td></td>
                   </tr>
                 )}
 
@@ -146,20 +186,17 @@ export default function TeamSettings() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ fontFamily: "var(--mono)", fontSize: 12 }}>
-                      {peer.connectionType || "—"}
+                    <td><span className="role-badge editor">Editor</span></td>
+                    <td>
+                      <TransferStatus
+                        status={peer.status}
+                        connectionType={peer.connectionType}
+                      />
                     </td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
-                        <span className={`status-dot ${peer.status === "connected" ? "active" : "offline"}`} />
-                        {peer.status || "—"}
-                      </div>
-                    </td>
-                    <td style={{ fontFamily: "var(--mono)", fontSize: 12 }}>
-                      {peer.rtt != null ? `${peer.rtt}ms` : "—"}
-                    </td>
-                    <td style={{ fontFamily: "var(--mono)", fontSize: 12 }}>
-                      {peer.publicIp || "—"}
+                      <button className="btn-sm-blue" onClick={() => requestConnect(peer)}>
+                        연결 신청
+                      </button>
                     </td>
                   </tr>
                 ))}
