@@ -19,15 +19,15 @@ const OS_DATA = {
     size: "42MB",
     checksum: "b4e0c3d28e5f69a1023bc45de6fg7890bcde2345fg678901bcdefg2345678901",
     installStep: "DMG를 마운트하고 Applications 폴더로 드래그합니다.",
-    installCmd: "open DirectP2P_Agent_Mac_arm64.dmg",
+    installCmd: "open DirectP2P_Agent_Mac_arm64",
   },
   linux: {
     label: "🐧 Linux",
     file: "DirectP2P_Agent_Linux_amd64",
     size: "38MB",
     checksum: "c5f1d4e39f6g7ab2134cd56ef7gh8901cdef3456gh789012cdefgh3456789012",
-    installStep: "sudo dpkg -i directp2p-agent_1.0.0_amd64.deb 명령어로 설치합니다.",
-    installCmd: "sudo dpkg -i directp2p-agent_1.0.0_amd64.deb",
+    installStep: "sudo dpkg -i directp2p-agent_1.0.0_amd64 명령어로 설치합니다.",
+    installCmd: "sudo dpkg -i directp2p-agent_1.0.0_amd64",
   },
 };
 

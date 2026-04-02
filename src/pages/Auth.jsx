@@ -130,7 +130,7 @@ export default function Auth({ mode, setPage }) {
     const e = {};
     if (!isLogin && !form.name.trim()) e.name = "이름을 입력하세요.";
     if (!form.email.includes("@")) e.email = "올바른 이메일 주소를 입력하세요.";
-    if (form.pw.length < 6) e.pw = "비밀번호는 6자 이상이어야 합니다.";
+    if (form.pw.length < 8) e.pw = "비밀번호는 8자 이상이어야 합니다.";
     if (!isLogin && !form.agreeTerms) e.agreeTerms = "이용약관에 동의해야 합니다.";
     if (!isLogin && !form.agreePrivacy) e.agreePrivacy = "개인정보처리방침에 동의해야 합니다.";
     return e;
