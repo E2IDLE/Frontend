@@ -3,15 +3,35 @@ import { toast } from "../../utils/toast";
 import { apiFetch } from "../../utils/api";
 
 async function requestConnect(user) {
+  // 1. 상대방 ID 추출 (userId가 없으면 id라도 사용)
+  const targetId = user.userId || user.id;
+
+  if (!targetId) {
+    toast("대상 사용자의 ID를 찾을 수 없습니다.", "err");
+    console.error("User object missing ID:", user);
+    return;
+  }
+
   try {
     const res = await apiFetch("/sessions", {
       method: "POST",
-      body: JSON.stringify({ userId: user.userId }),
+      // 2. 서버가 기다리는 필드명에 맞춰 확실하게 전달
+      body: JSON.stringify({ 
+        receiverId: targetId, // 'userId' 대신 'receiverId'를 명시적으로 보내보세요
+        userId: targetId      // 혹시 모르니 기존 필드도 유지
+      }),
     });
-    if (!res.ok) { toast("연결 신청에 실패했습니다.", "err"); return; }
-    await res.json(); // sessionId, inviteCode 발급 (서버가 상대방에게 WebSocket으로 전송)
+
+    if (!res.ok) { 
+      const errData = await res.json().catch(() => ({}));
+      toast(errData.message || "연결 신청에 실패했습니다.", "err"); 
+      return; 
+    }
+
+    await res.json(); 
     toast(`${user.nickname || user.email}님에게 연결 신청을 보냈습니다.`, "ok");
-  } catch {
+  } catch (err) {
+    console.error("Connect Error:", err);
     toast("서버에 연결할 수 없습니다.", "err");
   }
 }
