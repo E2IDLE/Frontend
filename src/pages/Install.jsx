@@ -8,7 +8,7 @@ const OS_DATA = {
   windows: {
     label: "⊞ Windows",
     file: "DirectP2P_Agent_Win_x64.exe",
-    size: "45MB",
+    size: "48MB",
     checksum: "a3f9b2c17d4e58f0912ab34cd5ef6789abcd1234ef567890abcdef1234567890",
     installStep: "다운로드한 .exe 파일을 실행하고 설치 마법사의 지침에 따라 설정을 완료합니다.",
     installCmd: "directp2p-agent setup.exe",

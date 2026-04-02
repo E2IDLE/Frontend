@@ -1,6 +1,6 @@
 import { useRef, useCallback } from "react";
 
-const WS_URL = "wss://api-dev.directp2p.com/ws";
+const WS_URL = "https://directp2p.happytanuki.kr/ws";
 
 /**
  * Manages a WebSocket connection to the DirectP2P server.
