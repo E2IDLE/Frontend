@@ -15,7 +15,7 @@ const OS_DATA = {
   },
   macos: {
     label: "⌘ macOS",
-    file: "DirectP2P_Agent_Mac_arm64.dmg",
+    file: "DirectP2P_Agent_Mac_arm64",
     size: "42MB",
     checksum: "b4e0c3d28e5f69a1023bc45de6fg7890bcde2345fg678901bcdefg2345678901",
     installStep: "DMG를 마운트하고 Applications 폴더로 드래그합니다.",
