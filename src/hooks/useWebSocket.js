@@ -7,10 +7,10 @@ const WS_URL = "wss://directp2p.happytanuki.kr/ws";
  * Call connect(token) after login; disconnect() on logout.
  * Callbacks are kept fresh via ref to avoid stale closures.
  */
-export function useWebSocket({ onPeerJoined, onStatusChanged, onPeerDisconnected }) {
+export function useWebSocket({ onPeerJoined, onStatusChanged, onPeerDisconnected, onConnectionRequest }) {
   const wsRef = useRef(null);
   const cbRef = useRef({});
-  cbRef.current = { onPeerJoined, onStatusChanged, onPeerDisconnected };
+  cbRef.current = { onPeerJoined, onStatusChanged, onPeerDisconnected, onConnectionRequest };
 
   const connect = useCallback((token) => {
     if (!token) return;
@@ -25,6 +25,7 @@ export function useWebSocket({ onPeerJoined, onStatusChanged, onPeerDisconnected
       if (event === "session:peer_joined") cbRef.current.onPeerJoined?.(data);
       else if (event === "session:status_changed") cbRef.current.onStatusChanged?.(data);
       else if (event === "session:peer_disconnected") cbRef.current.onPeerDisconnected?.(data);
+      else if (event === "session:connection_request") cbRef.current.onConnectionRequest?.(data);
     };
 
     ws.onerror = () => {};
