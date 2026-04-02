@@ -60,7 +60,7 @@ export default function AppShell({ setPage }) {
     return () => clearInterval(interval);
   }, []);
 
-  // WebSocket event handlers (stable references via useCallback)
+  // WebSocket event handlers
   const handlePeerJoined = useCallback((data) => {
     const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
     const sessionId = data?.sessionId ?? data?.session_id;
@@ -91,11 +91,19 @@ export default function AppShell({ setPage }) {
     toast(`${name}님이 연결을 신청했습니다.`, "ok");
   }, []);
 
+  // 🔥 [수정됨] 범용 알람 처리를 위한 핸들러 추가
+  const handleNotification = useCallback((data) => {
+    const title = data?.title || "알림";
+    const message = data?.message || "새로운 메시지가 도착했습니다.";
+    toast(`${title}: ${message}`, "ok");
+  }, []);
+
   const { connect, disconnect } = useWebSocket({
     onPeerJoined: handlePeerJoined,
     onStatusChanged: handleStatusChanged,
     onPeerDisconnected: handlePeerDisconnected,
     onConnectionRequest: handleConnectionRequest,
+    onNotification: handleNotification, // 🔥 [수정됨] 새 핸들러 연결
   });
 
   // Connect WebSocket on mount
