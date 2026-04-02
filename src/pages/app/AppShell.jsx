@@ -41,43 +41,28 @@ export default function AppShell({ setPage }) {
   const [connectedPeers, setConnectedPeers] = useState([]);
   const prevAddrRef = useRef("");
 
-  // Agent status polling
-// 1. 에이전트 상태 확인 및 서버에 내 주소 등록 (Registration)
+  // 1. 에이전트 상태 확인 및 서버 등록 로직
   useEffect(() => {
     const pollAgentAndRegister = async () => {
       try {
-        // 에이전트에서 현재 상태 가져오기 (스크린샷에 찍힌 그 데이터)
         const res = await agentCall("GET", "/status");
+        if (!res.ok) throw new Error();
         const data = await res.json();
 
-        // 에이전트 데이터가 유효한지 확인
-        // (스크린샷에 multiAddress와 peerId가 있으니 이를 활용합니다)
         if (data && data.multiAddress) {
           setAgentInfo(data);
-
-          // 멀티어드레스가 변경되었을 때만 서버에 보고
           if (data.multiAddress !== prevAddrRef.current) {
             try {
-              // 서버의 RegisterAgentRequest 구조체에 맞게 매핑
               await apiFetch("/users/me/agents", {
                 method: "POST",
                 body: JSON.stringify({
-                  // 1. DeviceName: agentName이 비어있다면 peerId 앞글자라도 사용
                   deviceName: data.agentName || `Device-${data.peerId?.substring(0, 5)}`,
-                  
-                  // 2. Platform: 서버 제약(windows, macos, linux)에 맞춰 전송
-                  // 에이전트 응답에 없다면 일단 기본값 'windows' (필요시 수정)
                   platform: "windows", 
-                  
-                  // 3. AgentVersion: "0.0.0" 처럼 응답에 있는 값 사용
                   agentVersion: data.agentVersion || "1.0.0",
-                  
-                  // 4. MultiAddress: 서버 필드명이 소문자 "multiaddress"임에 주의!
                   multiaddress: data.multiAddress 
                 }),
               });
-
-              console.log("✅ 서버에 에이전트 등록 성공:", data.multiAddress);
+              console.log("✅ 서버 등록 성공:", data.multiAddress);
               prevAddrRef.current = data.multiAddress;
             } catch (err) {
               console.error("❌ 서버 등록 실패:", err);
@@ -85,32 +70,32 @@ export default function AppShell({ setPage }) {
           }
         }
       } catch (err) {
-        console.error("Agent Polling Error:", err);
         setAgentInfo(null);
       }
     };
 
     pollAgentAndRegister();
-    const interval = setInterval(pollAgentAndRegister, 10000); // 10초마다 체크
+    const interval = setInterval(pollAgentAndRegister, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // WebSocket event handlers
+  // 2. WebSocket 이벤트 핸들러들
   const handlePeerJoined = useCallback((data) => {
-    const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
-    const sessionId = data?.sessionId ?? data?.session_id;
-    const peerId = data?.peerId ?? data?.peer_id;
-    const multiAddress = data?.multiAddress ?? data?.multi_address;
-    const inviteCode = data?.inviteCode ?? data?.invite_code;
+    const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? "알 수 없음";
     const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { id, name, sessionId, peerId, multiAddress, inviteCode }]);
+    setNotifications(prev => [...prev, { 
+      id, name, 
+      sessionId: data?.sessionId ?? data?.session_id, 
+      peerId: data?.peerId ?? data?.peer_id, 
+      multiAddress: data?.multiAddress ?? data?.multi_address, 
+      inviteCode: data?.inviteCode ?? data?.invite_code 
+    }]);
   }, []);
 
   const handleStatusChanged = useCallback((data) => {
     const status = data?.status;
     if (status === "connected") toast("P2P 연결 완료!", "ok");
-    else if (status === "completed") toast("전송이 완료되었습니다.", "ok");
-    else if (status === "error") toast("연결 중 오류가 발생했습니다.", "err");
+    else if (status === "error") toast("연결 중 오류 발생", "err");
   }, []);
 
   const handlePeerDisconnected = useCallback(() => {
@@ -119,18 +104,13 @@ export default function AppShell({ setPage }) {
 
   const handleConnectionRequest = useCallback((data) => {
     const name = data?.senderNickname ?? "알 수 없음";
-    const sessionId = data?.sessionId;
-    const inviteCode = data?.inviteCode;
     const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { id, name, sessionId, inviteCode }]);
+    setNotifications(prev => [...prev, { id, name, sessionId: data?.sessionId, inviteCode: data?.inviteCode }]);
     toast(`${name}님이 연결을 신청했습니다.`, "ok");
   }, []);
 
-  // 🔥 [수정됨] 범용 알람 처리를 위한 핸들러 추가
   const handleNotification = useCallback((data) => {
-    const title = data?.title || "알림";
-    const message = data?.message || "새로운 메시지가 도착했습니다.";
-    toast(`${title}: ${message}`, "ok");
+    toast(`${data?.title || "알림"}: ${data?.message || "메시지 도착"}`, "ok");
   }, []);
 
   const { connect, disconnect } = useWebSocket({
@@ -138,20 +118,23 @@ export default function AppShell({ setPage }) {
     onStatusChanged: handleStatusChanged,
     onPeerDisconnected: handlePeerDisconnected,
     onConnectionRequest: handleConnectionRequest,
-    onNotification: handleNotification, // 🔥 [수정됨] 새 핸들러 연결
+    onNotification: handleNotification,
   });
 
-  // Connect WebSocket on mount
+  // 3. 🔥 [수정됨] WebSocket 연결 로직 (의존성 비움)
   useEffect(() => {
     setUnauthHandler(() => {
-      toast("세션이 만료되었습니다. 다시 로그인해주세요.", "warn");
       setPage("login");
     });
     const token = getToken();
     if (token) connect(token);
-    return () => disconnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    return () => {
+      if (disconnect) disconnect();
+    };
+  }, []); // 👈 의존성 배열을 비워야 무한 루프가 안 생깁니다!
+
+  // 4. 연결 수락 로직
   const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t, inviteCode) => {
     let targetPeerId = peerId;
     let targetMultiAddress = multiAddress;
@@ -162,84 +145,39 @@ export default function AppShell({ setPage }) {
           method: "POST",
           body: JSON.stringify({ inviteCode }),
         });
-
-        if (!res.ok) {
-          if (res.status === 404) toast("세션이 만료되었습니다.", "warn");
-          else toast("연결 수락에 실패했습니다.", "err");
-          setNotifications(prev => prev.filter(n => n.id !== id));
-          return;
+        if (res.ok) {
+          const joinData = await res.json();
+          if (joinData.peerId) targetPeerId = joinData.peerId;
+          if (joinData.multiAddress) targetMultiAddress = joinData.multiAddress;
         }
-
-        // 서버 응답에서 상대방 에이전트 정보를 받아옴
-        const joinData = await res.json().catch(() => ({}));
-        console.log("서버에서 받은 조인 데이터:", joinData);
-
-        // 서버가 peerId와 multiAddress를 응답에 포함시켜 준다면 여기서 덮어씌웁니다.
-        if (joinData.peerId) targetPeerId = joinData.peerId;
-        if (joinData.multiAddress) targetMultiAddress = joinData.multiAddress;
-
       } catch (err) {
-        console.error("Join Error:", err);
-        toast("서버에 연결할 수 없습니다.", "err");
+        toast("서버 연결 실패", "err");
         return;
       }
     }
 
-    // 수집된 타겟 정보를 바탕으로 에이전트에게 홀펀칭 요청
     if (targetPeerId && targetMultiAddress) {
       try {
-        toast("에이전트와 피어 연결을 시도합니다...", "ok");
-        
-        const res = await agentCall("POST", "/peers", { 
-          peerId: targetPeerId, 
-          peerMultiAddress: targetMultiAddress 
-        });
-
-        const json = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          const code = json?.errorCode;
-          if (code === "E3002") toast("피어 연결에 실패했습니다.", "err");
-          else if (code === "E5002") toast("홀펀칭 실패. 릴레이(TURN)로 전환합니다.", "warn");
-          else toast("피어 연결 실패 (에이전트 에러)", "err");
-          return;
+        const res = await agentCall("POST", "/peers", { peerId: targetPeerId, peerMultiAddress: targetMultiAddress });
+        if (res.ok) {
+          setConnectedPeers(prev => [...prev, { peerId: targetPeerId, nickname: name }]);
+          toast("연결 성공!", "ok");
         }
-
-        setConnectedPeers(prev => [...prev, { peerId: targetPeerId, nickname: name }]);
-        toast(`${name}님과 P2P 연결이 완료되었습니다!`, "ok");
       } catch (err) {
-        console.error("Agent Call Error:", err);
-        toast("에이전트가 실행 중인지 확인해주세요.", "err");
-        return;
+        toast("에이전트 연결 실패", "err");
       }
-    } else {
-      // 서버에서 데이터가 안 오면 명령 실패
-      console.warn("홀펀칭 실패: peerId 또는 multiAddress가 없습니다.");
-      toast("연결 정보가 부족하여 P2P 터널을 생성할 수 없습니다.", "err");
     }
-
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const rejectNotification = async (id, sessionId) => {
-    if (sessionId) {
-      try {
-        await apiFetch(`/sessions/${sessionId}`, { method: "DELETE" });
-      } catch { /* 무시 */ }
-    }
+  const rejectNotification = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-    toast("연결 신청을 거절했습니다.", "warn");
   };
-
-  const markAllRead = () => setNotifications([]);
 
   const handleLogout = async () => {
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-    } catch {}
+    try { await apiFetch("/auth/logout", { method: "POST" }); } catch {}
     clearToken();
     disconnect();
-    toast("로그아웃되었습니다.", "warn");
     setPage("landing");
   };
 
@@ -252,7 +190,7 @@ export default function AppShell({ setPage }) {
           onAccept={acceptNotification}
           onReject={rejectNotification}
           onLogout={handleLogout}
-          onMarkAllRead={markAllRead}
+          onMarkAllRead={() => setNotifications([])}
         />
         <Sidebar tab={tab} setTab={setTab} agentInfo={agentInfo} />
         <div className="app-main">
