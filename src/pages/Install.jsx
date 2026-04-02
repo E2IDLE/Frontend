@@ -23,7 +23,7 @@ const OS_DATA = {
   },
   linux: {
     label: "🐧 Linux",
-    file: "DirectP2P_Agent_Linux_amd64.deb",
+    file: "DirectP2P_Agent_Linux_amd64",
     size: "38MB",
     checksum: "c5f1d4e39f6g7ab2134cd56ef7gh8901cdef3456gh789012cdefgh3456789012",
     installStep: "sudo dpkg -i directp2p-agent_1.0.0_amd64.deb 명령어로 설치합니다.",
