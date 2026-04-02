@@ -18,42 +18,50 @@ async function requestConnect(peer) {
   }
 }
 
-function TransferStatus({ status, connectionType, isMe }) {
-  if (isMe) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
-        <span className="status-dot active" />
-        전송 중
-      </div>
-    );
+// 피어 응답에서 배열을 추출 (배열 직접 반환 or { peers/data/items: [] } 등 래핑 대응)
+function extractPeers(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") {
+    const nested = raw.peers ?? raw.data ?? raw.items ?? raw.list;
+    if (Array.isArray(nested)) return nested;
   }
-  if (status === "connected" && connectionType) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
-        <span className="status-dot active" />
-        전송 중
-      </div>
-    );
-  }
-  if (status === "connected") {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
-        <span className="status-dot idle" />
-        대기 중
-      </div>
-    );
-  }
+  return [];
+}
+
+function ConnectionStatus({ dot, label }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
-      <span className="status-dot offline" />
-      접속 종료
+      <span className={`status-dot ${dot}`} />
+      {label}
     </div>
   );
+}
+
+function MeStatus({ peers, agentError }) {
+  if (agentError) {
+    return <ConnectionStatus dot="offline" label="접속 종료" />;
+  }
+  const hasConnected = peers.some(p => p.status === "connected");
+  if (hasConnected) {
+    return <ConnectionStatus dot="active" label="연결 중" />;
+  }
+  return <ConnectionStatus dot="idle" label="대기 중" />;
+}
+
+function PeerStatus({ status, connectionType }) {
+  if (status === "connected" && connectionType) {
+    return <ConnectionStatus dot="active" label="연결 중" />;
+  }
+  if (status === "connected") {
+    return <ConnectionStatus dot="idle" label="대기 중" />;
+  }
+  return <ConnectionStatus dot="offline" label="접속 종료" />;
 }
 
 export default function TeamSettings() {
   const [me, setMe] = useState(null);
   const [peers, setPeers] = useState([]);
+  const [agentError, setAgentError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,14 +84,25 @@ export default function TeamSettings() {
         if (!cancelled) toast("유저 정보를 불러오지 못했습니다.", "err");
       }
 
-      // 에이전트 피어 목록 (에이전트 미실행 시 빈 배열)
+      // 에이전트 피어 목록
       try {
         const res = await agentCall("GET", "/peers");
-        if (!cancelled && res.ok) {
-          setPeers(await res.json());
+        if (!cancelled) {
+          if (res.ok) {
+            const raw = await res.json();
+            console.log("[TeamSettings] /peers raw:", raw);
+            setPeers(extractPeers(raw));
+            setAgentError(false);
+          } else {
+            setPeers([]);
+            setAgentError(true);
+          }
         }
       } catch {
-        if (!cancelled) setPeers([]);
+        if (!cancelled) {
+          setPeers([]);
+          setAgentError(true);
+        }
       }
 
       if (!cancelled) setLoading(false);
@@ -124,7 +143,7 @@ export default function TeamSettings() {
                 <tr>
                   <th>프로필</th>
                   <th>권한</th>
-                  <th>전송 상태</th>
+                  <th>연결 상태</th>
                   <th>연결 신청</th>
                 </tr>
               </thead>
@@ -159,7 +178,7 @@ export default function TeamSettings() {
                       </div>
                     </td>
                     <td><span className="role-badge admin">Admin</span></td>
-                    <td><TransferStatus isMe /></td>
+                    <td><MeStatus peers={peers} agentError={agentError} /></td>
                     <td></td>
                   </tr>
                 )}
@@ -188,10 +207,7 @@ export default function TeamSettings() {
                     </td>
                     <td><span className="role-badge editor">Editor</span></td>
                     <td>
-                      <TransferStatus
-                        status={peer.status}
-                        connectionType={peer.connectionType}
-                      />
+                      <PeerStatus status={peer.status} connectionType={peer.connectionType} />
                     </td>
                     <td>
                       <button className="btn-sm-blue" onClick={() => requestConnect(peer)}>
@@ -206,7 +222,9 @@ export default function TeamSettings() {
 
           {peers.length === 0 && (
             <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text2)", fontSize: 13 }}>
-              연결된 피어가 없습니다. 에이전트를 실행하고 상대방과 연결하세요.
+              {agentError
+                ? "에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요."
+                : "연결된 피어가 없습니다. 상대방과 연결하세요."}
             </div>
           )}
         </>
