@@ -39,7 +39,7 @@ export default function AppShell({ setPage }) {
   const notifIdRef = useRef(1);
   const [agentInfo, setAgentInfo] = useState(null);
   const [connectedPeers, setConnectedPeers] = useState([]);
-  const prevAddrRef = useRef("");
+  // const prevAddrRef = useRef("");
 
   useEffect(() => {
     const pollAgentAndRegister = async () => {
