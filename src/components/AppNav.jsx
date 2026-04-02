@@ -69,11 +69,11 @@ export default function AppNav({ tab, setTab, setPage, avatar, notifications = [
                     </div>
                     <div style={{ display:"flex", gap:5, flexShrink:0 }}>
                       <button className="btn-sm-blue" style={{ padding:"3px 8px" }}
-                              onClick={() => onAccept(n.id, n.name, n.sessionId, n.peerId, n.multiAddress, t)}>
+                              onClick={() => onAccept(n.id, n.name, n.sessionId, n.peerId, n.multiAddress, t, n.inviteCode)}>
                         {t.bellAccept}
                       </button>
                       <button className="btn-sm-red" style={{ padding:"3px 8px" }}
-                              onClick={() => onReject(n.id, n.sessionId, t)}>
+                              onClick={() => onReject(n.id, n.sessionId)}>
                         {t.bellReject}
                       </button>
                     </div>

@@ -62,12 +62,13 @@ export default function AppShell({ setPage }) {
 
   // WebSocket event handlers (stable references via useCallback)
   const handlePeerJoined = useCallback((data) => {
-    const name = data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
+    const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
     const sessionId = data?.sessionId ?? data?.session_id;
     const peerId = data?.peerId ?? data?.peer_id;
     const multiAddress = data?.multiAddress ?? data?.multi_address;
+    const inviteCode = data?.inviteCode ?? data?.invite_code;
     const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { id, name, sessionId, peerId, multiAddress }]);
+    setNotifications(prev => [...prev, { id, name, sessionId, peerId, multiAddress, inviteCode }]);
   }, []);
 
   const handleStatusChanged = useCallback((data) => {
@@ -98,12 +99,17 @@ export default function AppShell({ setPage }) {
     return () => disconnect();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t) => {
+  const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t, inviteCode) => {
     if (sessionId) {
       try {
-        const res = await apiFetch(`/sessions/${sessionId}/join`, { method: "POST" });
+        const res = await apiFetch(`/sessions/${sessionId}/join`, {
+          method: "POST",
+          body: JSON.stringify({ inviteCode }),
+        });
         if (!res.ok) {
-          toast("세션 참여에 실패했습니다.", "err");
+          if (res.status === 404) toast("세션이 만료되었습니다.", "warn");
+          else toast("연결 수락에 실패했습니다.", "err");
+          setNotifications(prev => prev.filter(n => n.id !== id));
           return;
         }
       } catch {
@@ -130,23 +136,20 @@ export default function AppShell({ setPage }) {
         return;
       }
     } else {
-      toast(t.toastSessionJoined, "ok");
+      toast("연결되었습니다!", "ok");
     }
 
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const rejectNotification = async (id, sessionId, t) => {
+  const rejectNotification = async (id, sessionId) => {
     if (sessionId) {
       try {
         await apiFetch(`/sessions/${sessionId}`, { method: "DELETE" });
-      } catch {
-        toast("서버에 연결할 수 없습니다.", "err");
-        return;
-      }
+      } catch { /* 무시 */ }
     }
     setNotifications(prev => prev.filter(n => n.id !== id));
-    toast(t.toastRejected, "info");
+    toast("연결 신청을 거절했습니다.", "warn");
   };
 
   const markAllRead = () => setNotifications([]);

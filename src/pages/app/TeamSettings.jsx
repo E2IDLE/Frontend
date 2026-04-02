@@ -8,13 +8,11 @@ async function requestConnect(user) {
       method: "POST",
       body: JSON.stringify({ userId: user.userId }),
     });
-    if (res.ok) {
-      toast("연결 신청을 보냈습니다.", "ok");
-    } else {
-      toast("연결 신청에 실패했습니다.", "err");
-    }
+    if (!res.ok) { toast("연결 신청에 실패했습니다.", "err"); return; }
+    await res.json(); // sessionId, inviteCode 발급 (서버가 상대방에게 WebSocket으로 전송)
+    toast(`${user.nickname || user.email}님에게 연결 신청을 보냈습니다.`, "ok");
   } catch {
-    toast("연결 신청에 실패했습니다.", "err");
+    toast("서버에 연결할 수 없습니다.", "err");
   }
 }
 
@@ -116,7 +114,6 @@ export default function TeamSettings() {
               <thead>
                 <tr>
                   <th>프로필</th>
-                  <th>권한</th>
                   <th>연결 상태</th>
                   <th>연결 신청</th>
                 </tr>
@@ -151,7 +148,6 @@ export default function TeamSettings() {
                         </div>
                       </div>
                     </td>
-                    <td><span className="role-badge admin">Admin</span></td>
                     <td><ConnectionStatus dot="idle" label="대기 중" /></td>
                     <td></td>
                   </tr>
@@ -182,7 +178,6 @@ export default function TeamSettings() {
                           </div>
                         </div>
                       </td>
-                      <td><span className="role-badge editor">Editor</span></td>
                       <td><ConnectionStatus dot="idle" label="대기 중" /></td>
                       <td>
                         <button className="btn-sm-blue" onClick={() => requestConnect(user)}>
