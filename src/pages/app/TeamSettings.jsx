@@ -37,10 +37,7 @@ function ConnectionStatus({ dot, label }) {
   );
 }
 
-function MeStatus({ peers, agentError }) {
-  if (agentError) {
-    return <ConnectionStatus dot="offline" label="접속 종료" />;
-  }
+function MeStatus({ peers }) {
   const hasConnected = peers.some(p => p.status === "connected");
   if (hasConnected) {
     return <ConnectionStatus dot="active" label="연결 중" />;
@@ -86,7 +83,7 @@ export default function TeamSettings() {
 
       // 에이전트 피어 목록
       try {
-        const res = await agentCall("GET", "/users");
+        const res = await apiCall("GET", "/users");
         if (!cancelled) {
           if (res.ok) {
             const raw = await res.json();
@@ -118,7 +115,7 @@ export default function TeamSettings() {
     <div style={{ padding: 24, flex: 1 }}>
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontFamily: "var(--display)", fontSize: 22, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 4 }}>
-          팀 설정
+          친구 설정
         </div>
         <div style={{ fontSize: 13, color: "var(--text2)" }}>
           총 {totalCount}명
@@ -178,7 +175,7 @@ export default function TeamSettings() {
                       </div>
                     </td>
                     <td><span className="role-badge admin">Admin</span></td>
-                    <td><MeStatus peers={peers} agentError={agentError} /></td>
+                    <td><MeStatus peers={peers} /></td>
                     <td></td>
                   </tr>
                 )}
