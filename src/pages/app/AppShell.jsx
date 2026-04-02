@@ -41,7 +41,7 @@ export default function AppShell({ setPage }) {
   const [connectedPeers, setConnectedPeers] = useState([]);
   const prevAddrRef = useRef("");
 
-  // 1. 에이전트 등록 함수 분리
+  // 1. 에이전트 등록 함수
   const registerAgent = useCallback(async (agentData) => {
     try {
       await apiFetch("/users/me/agents", {
@@ -60,56 +60,66 @@ export default function AppShell({ setPage }) {
     }
   }, []);
 
-  // 에이전트 상태 폴링 및 변경 시 자동 등록
+  // 에이전트 상태 폴링
   useEffect(() => {
     const pollAgentAndRegister = async () => {
       try {
         const res = await agentCall("GET", "/status");
-        if (!res.ok) return; // 에이전트가 꺼져있으면 무시
+        if (!res.ok) return;
         const data = await res.json();
 
         if (data && data.multiAddress) {
           setAgentInfo(data);
           
-          // multiAddress가 존재하고, 이전 주소와 다르면 재등록
           if (data.multiAddress !== prevAddrRef.current) {
             await registerAgent(data);
           }
         }
       } catch (err) {
-        // 에이전트 연결 오류는 무시하되 상태 초기화 (토스트는 띄우지 않음 - 너무 자주 뜰 수 있음)
         setAgentInfo(null);
       }
     };
 
-    pollAgentAndRegister(); // 마운트 시 즉시 실행
-    const interval = setInterval(pollAgentAndRegister, 10000); // 10초마다 체크
+    pollAgentAndRegister();
+    const interval = setInterval(pollAgentAndRegister, 10000);
     return () => clearInterval(interval);
   }, [registerAgent]);
 
 
-  // 3. WebSocket 이벤트 핸들러 처리
-  const handlePeerJoined = useCallback((data) => {
+  // 🔥 [수정된 부분] 상대방이 수락했을 때 중복 알람 안 뜨게 처리!
+  const handlePeerJoined = useCallback(async (data) => {
     const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
-    const sessionId = data?.sessionId ?? data?.session_id;
-    const peerId = data?.peerId ?? data?.peer_id; // 🔥 B의 userId
-    const inviteCode = data?.inviteCode ?? data?.invite_code;
-    const id = notifIdRef.current++;
+    const peerId = data?.peerId ?? data?.peer_id; 
     
-    // 벨 알림 추가
-    setNotifications(prev => [...prev, { 
-      id, name, sessionId, peerId, inviteCode, 
-      msg: `${name}님이 연결을 요청했습니다.` // 요구사항에 맞춤
-    }]);
+    // 알림 목록에 추가하지 않고 토스트 메시지만 조용히 띄웁니다.
+    toast(`${name}님이 연결을 수락했습니다. P2P 연결을 시도합니다...`, "ok");
+
+    // A가 B의 주소를 조회하고 에이전트에 전달
+    if (peerId) {
+      try {
+        const agentsRes = await apiFetch(`/users/me/agents?userID=${peerId}`);
+        if (agentsRes.ok) {
+          const agents = await agentsRes.json();
+          const onlineAgent = agents.find(a => a.status === "online");
+          
+          if (onlineAgent && onlineAgent.multiaddress) {
+            await agentCall("POST", "/peers", {
+              peerId: peerId,
+              peerMultiAddress: onlineAgent.multiaddress
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Peer Joined 에이전트 연결 에러:", err);
+      }
+    }
   }, []);
 
   const handleStatusChanged = useCallback(async (data) => {
     const status = data?.status;
     
     if (status === "connected") {
-      // A 입장에서 B가 수락했을 때 -> 상대방 multiAddress 조회 후 에이전트 전달
       try {
-        // 이벤트 데이터에 따라 상대방 ID를 가져옴 (receiverId 또는 peerId)
         const targetId = data?.receiverId || data?.peerId; 
         
         if (targetId) {
@@ -143,7 +153,7 @@ export default function AppShell({ setPage }) {
     const name = data?.senderNickname ?? "알 수 없음";
     const sessionId = data?.sessionId;
     const inviteCode = data?.inviteCode;
-    const peerId = data?.senderId ?? data?.peerId; // 🔥 notif에 peerId 저장 추가!
+    const peerId = data?.senderId ?? data?.peerId; 
     const id = notifIdRef.current++;
     
     setNotifications(prev => [...prev, { id, name, sessionId, inviteCode, peerId }]);
@@ -174,10 +184,9 @@ export default function AppShell({ setPage }) {
     return () => disconnect();
   }, [connect, disconnect, setPage]);
 
-  // 2. 알림 수락 버튼 핸들러
+  // 알림 수락 버튼 핸들러
   const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t, inviteCode) => {
     try {
-      // 1. 세션 참가
       if (sessionId) {
         const joinRes = await apiFetch(`/sessions/${sessionId}/join`, {
           method: "POST",
@@ -192,7 +201,6 @@ export default function AppShell({ setPage }) {
         }
       }
 
-      // 2. 상대방(A) multiAddress 조회
       if (!peerId) {
         toast("상대방 정보(ID)가 누락되어 연결할 수 없습니다.", "err");
         setNotifications(prev => prev.filter(n => n.id !== id));
@@ -215,7 +223,6 @@ export default function AppShell({ setPage }) {
         return;
       }
 
-      // 3. 내 에이전트에 상대방 정보 전달 -> 홀펀칭 시작
       const peerRes = await agentCall("POST", "/peers", {
         peerId: peerId,
         peerMultiAddress: onlineAgent.multiaddress
@@ -231,7 +238,6 @@ export default function AppShell({ setPage }) {
       toast("서버에 연결할 수 없습니다.", "err");
     }
 
-    // 작업 후 알림 삭제
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
