@@ -42,23 +42,41 @@ export default function AppShell({ setPage }) {
 
   // Agent status polling
   useEffect(() => {
-    const pollAgent = async () => {
-      try {
-        const res = await agentCall("GET", "/status");
-        const data = await res.json();
-        if (AGENT_VALID_STATUSES.includes(data.status)) {
-          setAgentInfo(data);
-        } else {
-          setAgentInfo(null);
+  const pollAgent = async () => {
+    try {
+      // 1. 에이전트로부터 최신 상태 가져오기
+      const res = await agentCall("GET", "/status");
+      const data = await res.json();
+
+      if (AGENT_VALID_STATUSES.includes(data.status)) {
+        setAgentInfo(data);
+
+        // API 서버에 에이전트 정보 등록/업데이트
+        if (data.multiaddress) {
+          await apiFetch("/users/me/agents", {
+            method: "POST",
+            body: JSON.stringify({
+              deviceName: data.deviceName || "My Device", 
+              platform: "windows", 
+              agentVersion: data.version || "1.0.0",
+              multiaddress: data.multiaddress 
+            }),
+          });
+          console.log("서버에 멀티어드레스 업데이트 완료:", data.multiaddress);
         }
-      } catch {
+      } else {
         setAgentInfo(null);
       }
-    };
-    pollAgent();
-    const interval = setInterval(pollAgent, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    } catch (err) {
+      setAgentInfo(null);
+      console.error("Agent Polling/Registration Error:", err);
+    }
+  };
+
+  pollAgent();
+  const interval = setInterval(pollAgent, 5000); // 주기 조절 가능
+  return () => clearInterval(interval);
+}, []);
 
   // WebSocket event handlers
   const handlePeerJoined = useCallback((data) => {
@@ -135,7 +153,7 @@ export default function AppShell({ setPage }) {
           return;
         }
 
-        // 🔥 [추가됨] 서버 응답에서 상대방 에이전트 정보를 받아옵니다.
+        // 서버 응답에서 상대방 에이전트 정보를 받아옴
         const joinData = await res.json().catch(() => ({}));
         console.log("서버에서 받은 조인 데이터:", joinData);
 
