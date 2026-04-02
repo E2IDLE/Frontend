@@ -10,7 +10,7 @@ const OS_DATA = {
     file: "DirectP2P_Agent_Win_x64.exe",
     size: "48MB",
     checksum: "a3f9b2c17d4e58f0912ab34cd5ef6789abcd1234ef567890abcdef1234567890",
-    installStep: "다운로드한 .exe 파일을 실행하고 설치 마법사의 지침에 따라 설정을 완료합니다.",
+    installStep: "다운로드한 .exe 파일을 실행합니다.",
     installCmd: "directp2p-agent setup.exe",
   },
   macos: {
@@ -18,7 +18,7 @@ const OS_DATA = {
     file: "DirectP2P_Agent_Mac_arm64",
     size: "42MB",
     checksum: "b4e0c3d28e5f69a1023bc45de6fg7890bcde2345fg678901bcdefg2345678901",
-    installStep: "DMG를 마운트하고 Applications 폴더로 드래그합니다.",
+    installStep: "다운로드한 .exe 파일을 실행합니다.",
     installCmd: "open DirectP2P_Agent_Mac_arm64",
   },
   linux: {
@@ -26,7 +26,7 @@ const OS_DATA = {
     file: "DirectP2P_Agent_Linux_amd64",
     size: "38MB",
     checksum: "c5f1d4e39f6g7ab2134cd56ef7gh8901cdef3456gh789012cdefgh3456789012",
-    installStep: "sudo dpkg -i directp2p-agent_1.0.0_amd64 명령어로 설치합니다.",
+    installStep: "다운로드한 .exe 파일을 실행합니다.",
     installCmd: "sudo dpkg -i directp2p-agent_1.0.0_amd64",
   },
 };
@@ -151,9 +151,9 @@ export default function Install({ setPage }) {
                 desc: data.installStep,
               },
               {
-                num: "03",
+                num: "02",
                 title: "대시보드 연결",
-                desc: "설치가 완료되면 에이전트가 백그라운드에서 실행되며 웹 대시보드와 자동으로 동기화됩니다.",
+                desc: "실행이 완료되면 에이전트가 백그라운드에서 실행되며 웹 대시보드와 자동으로 동기화됩니다.",
               },
             ].map((step) => (
               <div key={step.num} style={{ display: "flex", gap: 16 }}>
