@@ -167,6 +167,13 @@ export default function Auth({ mode, setPage }) {
           setPage("login");
         } else if (res.status === 409) {
           setErrs({ email: "이미 사용 중인 이메일입니다." });
+        } else if (res.status === 400) {
+          const data = await res.json().catch(() => ({}));
+          if (data.message?.includes("Password")) {
+            setErrs({ pw: "비밀번호는 8자 이상이어야 합니다." });
+          } else {
+            toast("입력값을 확인해주세요.", "err");
+          }
         } else {
           toast("입력값을 확인해주세요.", "err");
         }
