@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find /c/Users/KISIA/Desktop/S-개발자/p2p/media-grid-app -name *.css -type f)"
+      "Bash(find /c/Users/KISIA/Desktop/S-개발자/p2p/media-grid-app -name *.css -type f)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 5 https://directp2p.happytanuki.kr/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"test@test.com\",\"password\":\"testtest\"}')",
+      "Bash(curl -s -I -X OPTIONS \"https://directp2p.happytanuki.kr/auth/login\" -H \"Origin: http://localhost:5173\" -H \"Access-Control-Request-Method: POST\" -H \"Access-Control-Request-Headers: Content-Type,Authorization\")",
+      "Bash(curl -s -v \"https://directp2p.happytanuki.kr/auth/login\" -X POST -H \"Content-Type: application/json\" -H \"Origin: http://localhost:5173\" -d '{\"email\":\"test@test.com\",\"password\":\"test1234\"}')"
     ]
   }
 }

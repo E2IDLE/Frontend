@@ -15,9 +15,10 @@ export const setUnauthHandler = (fn) => { _onUnauth = fn; };
  */
 export async function apiFetch(path, options = {}) {
   const token = getToken();
+  const isAuthPath = path.startsWith("/auth/");
   const headers = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token && !isAuthPath ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   };
 
