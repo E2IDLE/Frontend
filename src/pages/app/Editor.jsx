@@ -2,6 +2,24 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "../../utils/toast";
 import { useLang } from "../../i18n";
 
+const AGENT_BASE = "http://127.0.0.1:17432";
+
+const formatBytes = (bytes) => {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  return `${(bytes / 1e3).toFixed(0)} KB`;
+};
+
+const formatEta = (seconds) => {
+  if (seconds === null || seconds === undefined) return "계산 중";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  if (m > 0) return `${m}분 ${s}초`;
+  return `${s}초`;
+};
+
+const formatSpeed = (bytesPerSec) => `${(bytesPerSec / 1e6).toFixed(1)} MB/s`;
+
 const toTC = s => {
   const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=Math.floor(s%60), fr=Math.floor((s%1)*30);
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}:${String(fr).padStart(2,"0")}`;
@@ -10,7 +28,7 @@ const toTC = s => {
 const TEST_NAMES = ["김민준","이서연","박지훈","최수아","정도윤","강하은","윤준호","임채원","오시우","한지민",
                     "James Kim","Sarah Park","David Lee","Emily Choi","Michael Jung"];
 
-export default function Editor({ onAddNotification }) {
+export default function Editor({ onAddNotification, agentInfo, connectedPeers = [] }) {
   const [playing, setPlaying]       = useState(false);
   const [tcSec, setTcSec]           = useState(14*60+22+4/30);
   const [activeFile, setActiveFile] = useState(0);
@@ -18,8 +36,11 @@ export default function Editor({ onAddNotification }) {
   const [outPoint, setOutPoint]     = useState(null);
   const [cuts, setCuts]             = useState([]);
   const [editingId, setEditingId]   = useState(null);   // id of cut being renamed
+  const [transferProgress, setTransferProgress] = useState(null);
   const intervalRef = useRef(null);
   const cutIdRef    = useRef(1);
+  const fileInputRef = useRef(null);
+  const lastTransferStatusRef = useRef(null);
   const { t } = useLang();
 
   // Refs so the keyboard listener always reads current values
@@ -39,6 +60,28 @@ export default function Editor({ onAddNotification }) {
     return () => clearInterval(intervalRef.current);
   }, [playing]);
 
+  /* ── transfer progress polling ── */
+  useEffect(() => {
+    if (!agentInfo) { setTransferProgress(null); return; }
+    const poll = async () => {
+      try {
+        const res = await fetch(`${AGENT_BASE}/transfer/progress`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setTransferProgress(data);
+        if (lastTransferStatusRef.current !== data.status) {
+          if (data.status === "completed") toast("전송이 완료되었습니다.", "ok");
+          else if (data.status === "failed") toast("전송 중 오류가 발생했습니다.", "err");
+          else if (data.status === "cancelled") toast("전송이 취소되었습니다.", "warn");
+          lastTransferStatusRef.current = data.status;
+        }
+      } catch { /* silent */ }
+    };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => clearInterval(id);
+  }, [agentInfo]);
+
   /* ── keyboard shortcuts  I = 인점  O = 아웃점 ── */
   useEffect(() => {
     const handleKey = (e) => {
@@ -56,6 +99,41 @@ export default function Editor({ onAddNotification }) {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
+
+  /* ── file transfer ── */
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (connectedPeers.length === 0) { toast("연결된 피어가 없습니다.", "err"); return; }
+    const peer = connectedPeers[0];
+    try {
+      const res = await fetch(`${AGENT_BASE}/peers/${peer.peerId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: [{ name: file.name, path: file.name, size: file.size, mimeType: file.type }],
+        }),
+      });
+      if (res.status === 409) { toast("이미 전송이 진행 중입니다.", "warn"); return; }
+      if (res.status === 404) { toast("연결된 피어를 찾을 수 없습니다.", "err"); return; }
+      const json = await res.json();
+      toast(json.message || "전송을 시작합니다.", "ok");
+    } catch {
+      toast("에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요.", "err");
+    }
+  };
+
+  const cancelTransfer = async () => {
+    try {
+      const res = await fetch(`${AGENT_BASE}/transfer/cancel`, { method: "POST" });
+      const json = await res.json();
+      const mb = ((json.transferredBytes ?? 0) / 1024 / 1024).toFixed(1);
+      toast(`전송이 취소되었습니다. (${mb}MB 전송됨)`, "warn");
+    } catch {
+      toast("에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요.", "err");
+    }
+  };
 
   /* ── cut actions ── */
   const addCut = () => {
@@ -104,6 +182,7 @@ export default function Editor({ onAddNotification }) {
     <div className="editor-layout" style={{ flex:1, overflow:"hidden" }}>
 
       {/* ── Left: transfer sidebar ── */}
+      <input ref={fileInputRef} type="file" accept="video/*" style={{ display:"none" }} onChange={handleFileSelected} />
       <div className="transfer-sidebar">
         <div style={{ padding:"14px 14px 0", fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)", letterSpacing:"0.1em", marginBottom:10 }}>
           {t.projectFiles}
@@ -115,26 +194,67 @@ export default function Editor({ onAddNotification }) {
             <div className="file-size">{f.size}</div>
           </div>
         ))}
+        <div style={{ padding:"8px 14px", borderBottom:"1px solid var(--border)" }}>
+          <button className="btn-sm" style={{ width:"100%", marginBottom:4 }}
+                  onClick={() => fileInputRef.current?.click()}>
+            ＋ 미디어 가져오기
+          </button>
+          {transferProgress && (transferProgress.status === "transferring" || transferProgress.status === "preparing") && (
+            <button className="btn-sm-red" style={{ width:"100%", fontSize:10 }} onClick={cancelTransfer}>
+              전송 취소
+            </button>
+          )}
+        </div>
         <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--border)" }}>
           <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)", letterSpacing:"0.1em", marginBottom:10 }}>{t.transferStatus}</div>
-          {[[t.currentSpeed,"1.2 Gbps","green"],[t.latency,"15 ms",""],[t.remaining,"18 min",""]].map(([k,v,c]) => (
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }} key={k}>
-              <span style={{ fontSize:11, color:"var(--text3)" }}>{k}</span>
-              <span style={{ fontFamily:"var(--mono)", fontSize:11, color:c?"var(--green)":"var(--text)" }}>{v}</span>
-            </div>
-          ))}
-          <div style={{ height:3, background:"var(--border)", borderRadius:2, margin:"10px 0", overflow:"hidden" }}>
-            <div style={{ height:"100%", width:"65%", background:"var(--accent)", borderRadius:2, animation:"pulseBar 3s ease-in-out infinite" }} />
-          </div>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--green)", display:"inline-block" }} />
-            <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text3)" }}>{t.agentConnected}</span>
+          {transferProgress ? (
+            <>
+              {[
+                [t.currentSpeed, formatSpeed(transferProgress.currentSpeed ?? 0), "green"],
+                [t.remaining,    formatEta(transferProgress.eta),                  ""],
+                ["전송량",        `${formatBytes(transferProgress.totalTransferred ?? 0)} / ${formatBytes(transferProgress.totalSize ?? 0)}`, ""],
+              ].map(([k,v,c]) => (
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }} key={k}>
+                  <span style={{ fontSize:11, color:"var(--text3)" }}>{k}</span>
+                  <span style={{ fontFamily:"var(--mono)", fontSize:11, color:c?"var(--green)":"var(--text)" }}>{v}</span>
+                </div>
+              ))}
+              <div style={{ height:3, background:"var(--border)", borderRadius:2, margin:"10px 0", overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${transferProgress.totalProgress ?? 0}%`, background:"var(--accent)", borderRadius:2, transition:"width .5s" }} />
+              </div>
+              {transferProgress.files?.map(f => (
+                <div key={f.name} style={{ marginBottom:4 }}>
+                  <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text3)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.name}</div>
+                  <div style={{ height:2, background:"var(--border)", borderRadius:1, overflow:"hidden", marginTop:2 }}>
+                    <div style={{ height:"100%", width:`${f.progress ?? 0}%`, background:"var(--accent2)", borderRadius:1, transition:"width .5s" }} />
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)" }}>전송 없음</div>
+          )}
+          <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8 }}>
+            <span style={{ width:5, height:5, borderRadius:"50%", background: agentInfo ? "var(--green)" : "var(--text3)", display:"inline-block" }} />
+            {agentInfo ? (
+              <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text3)" }}>
+                {agentInfo.agentName} · v{agentInfo.agentVersion} · {agentInfo.natType}
+              </span>
+            ) : (
+              <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text3)" }}>{t.agentConnected}</span>
+            )}
           </div>
         </div>
         <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--border)" }}>
           <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)", letterSpacing:"0.1em", marginBottom:10 }}>{t.nodeInfo}</div>
           <div style={{ fontSize:12, color:"var(--text2)", marginBottom:2 }}>{t.sender}</div>
-          <div style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
+          {agentInfo ? (
+            <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text3)", wordBreak:"break-all" }}>
+              {agentInfo.multiAddress ?? "—"}
+            </div>
+          ) : (
+            <div style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
+          )}
         </div>
         {onAddNotification && (
           <div style={{ padding:"12px 14px", marginTop:"auto" }}>
@@ -271,6 +391,20 @@ export default function Editor({ onAddNotification }) {
 
       {/* ── Right: cut-edit panel ── */}
       <div className="right-panel">
+
+        {/* System info */}
+        {agentInfo && (
+          <div className="panel-section">
+            <div className="panel-label">시스템</div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+              <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)" }}>NAT</span>
+              <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--accent2)" }}>{agentInfo.natType ?? "—"}</span>
+            </div>
+            <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text3)", wordBreak:"break-all" }}>
+              {agentInfo.multiAddress ?? "—"}
+            </div>
+          </div>
+        )}
 
         {/* In / Out controls */}
         <div className="panel-section">

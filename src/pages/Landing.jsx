@@ -24,7 +24,7 @@ export default function Landing({ setPage }) {
         <p className="hero-desc">중앙 서버 없는 혁신적인 P2P 아키텍처로 8K RAW 영상을 끊김 없이 스트리밍하고 전송하세요. QUIC 프로토콜 기반의 초저지연 기술이 편집 워크플로우를 재정의합니다.</p>
         <div className="hero-actions">
           <button className="btn-cta" onClick={() => setPage("signup")}>무료로 시작하기</button>
-          <button className="btn-outline" onClick={() => setPage("pricing")}>요금제 보기</button>
+          <button className="btn-outline" onClick={() => setPage("install")}>에이전트 다운로드</button>
           <button className="btn-outline" onClick={() => toast("문의 이메일: support@directp2p.com", "info")}>문의하기</button>
         </div>
         <div className="hero-stats">

@@ -8,6 +8,7 @@ export default function PubNav({ setPage }) {
       <div style={{ display:"flex", gap:32 }}>
         <button className="nav-link" onClick={() => setPage("landing")}>Features</button>
         <button className="nav-link" onClick={() => setPage("pricing")}>Pricing</button>
+        <button className="nav-link" onClick={() => setPage("install")}>Download</button>
         <button className="nav-link" onClick={() => toast("문의 이메일: support@directp2p.com", "info")}>문의하기</button>
       </div>
       <div style={{ display:"flex", gap:12 }}>

@@ -1,7 +1,7 @@
 import { toast } from "../utils/toast";
 import { useLang, NAV_TABS } from "../i18n";
 
-export default function Sidebar({ tab, setTab }) {
+export default function Sidebar({ tab, setTab, agentInfo }) {
   const { lang, t } = useLang();
 
   const sideNavTabs = NAV_TABS.filter(({ key }) => key !== "editor");
@@ -45,6 +45,15 @@ export default function Sidebar({ tab, setTab }) {
         </div>
         <button className="btn-sm-blue" style={{ width:"100%",marginBottom:6 }} onClick={() => setTab("payment")}>{t.upgradePlan}</button>
         <div style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",textAlign:"center" }}>Media Lead · Admin</div>
+        {agentInfo ? (
+          <div style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--green)",textAlign:"center",marginTop:4 }}>
+            에이전트 v{agentInfo.agentVersion}
+          </div>
+        ) : (
+          <div style={{ fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:4 }}>
+            에이전트 미감지
+          </div>
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,9 @@ import { toast } from "../../utils/toast";
 import { apiFetch, clearToken, getToken, setUnauthHandler } from "../../utils/api";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
+const AGENT_BASE = "http://127.0.0.1:17432";
+const AGENT_VALID_STATUSES = ["idle", "connected", "transferring"];
+
 function loadAvatar() {
   try {
     const raw = localStorage.getItem("profile_form");
@@ -35,13 +38,37 @@ export default function AppShell({ setPage }) {
   const [lang, setLang] = useState(loadLang);
   const [notifications, setNotifications] = useState([]);
   const notifIdRef = useRef(1);
+  const [agentInfo, setAgentInfo] = useState(null);
+  const [connectedPeers, setConnectedPeers] = useState([]);
+
+  // Agent status polling
+  useEffect(() => {
+    const pollAgent = async () => {
+      try {
+        const res = await fetch(`${AGENT_BASE}/status`);
+        const data = await res.json();
+        if (AGENT_VALID_STATUSES.includes(data.status)) {
+          setAgentInfo(data);
+        } else {
+          setAgentInfo(null);
+        }
+      } catch {
+        setAgentInfo(null);
+      }
+    };
+    pollAgent();
+    const interval = setInterval(pollAgent, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // WebSocket event handlers (stable references via useCallback)
   const handlePeerJoined = useCallback((data) => {
     const name = data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
     const sessionId = data?.sessionId ?? data?.session_id;
+    const peerId = data?.peerId ?? data?.peer_id;
+    const multiAddress = data?.multiAddress ?? data?.multi_address;
     const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { id, name, sessionId }]);
+    setNotifications(prev => [...prev, { id, name, sessionId, peerId, multiAddress }]);
   }, []);
 
   const handleStatusChanged = useCallback((data) => {
@@ -74,34 +101,57 @@ export default function AppShell({ setPage }) {
     setNotifications(prev => [...prev, { id, name, sessionId: null }]);
   };
 
-  const acceptNotification = async (id, name, sessionId, t) => {
-    // TODO: 서버 준비 후 주석 해제
-    // if (sessionId) {
-    //   try {
-    //     await apiFetch(`/sessions/${sessionId}/join`, { method: "POST" });
-    //   } catch {
-    //     toast("서버에 연결할 수 없습니다.", "err");
-    //     return;
-    //   }
-    // }
+  const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t) => {
+    if (sessionId) {
+      try {
+        const res = await apiFetch(`/sessions/${sessionId}/join`, { method: "POST" });
+        if (!res.ok) {
+          toast("세션 참여에 실패했습니다.", "err");
+          return;
+        }
+      } catch {
+        toast("서버에 연결할 수 없습니다.", "err");
+        return;
+      }
+    }
 
-    // 더미: 즉시 수락 처리
+    if (peerId && multiAddress) {
+      try {
+        const res = await fetch(`${AGENT_BASE}/peers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ peerId, peerMultiAddress: multiAddress }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const code = json?.errorCode;
+          if (code === "E3002") toast("피어 연결에 실패했습니다.", "err");
+          else if (code === "E5002") toast("홀펀칭에 실패했습니다. TURN 릴레이로 전환합니다.", "warn");
+          else toast("피어 연결에 실패했습니다.", "err");
+          return;
+        }
+        setConnectedPeers(prev => [...prev, { peerId, nickname: name }]);
+        toast("피어와 연결되었습니다.", "ok");
+      } catch {
+        toast("에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요.", "err");
+        return;
+      }
+    } else {
+      toast(t.toastSessionJoined, "ok");
+    }
+
     setNotifications(prev => prev.filter(n => n.id !== id));
-    toast(t.toastSessionJoined, "ok");
   };
 
   const rejectNotification = async (id, sessionId, t) => {
-    // TODO: 서버 준비 후 주석 해제
-    // if (sessionId) {
-    //   try {
-    //     await apiFetch(`/sessions/${sessionId}`, { method: "DELETE" });
-    //   } catch {
-    //     toast("서버에 연결할 수 없습니다.", "err");
-    //     return;
-    //   }
-    // }
-
-    // 더미: 즉시 거절 처리
+    if (sessionId) {
+      try {
+        await apiFetch(`/sessions/${sessionId}`, { method: "DELETE" });
+      } catch {
+        toast("서버에 연결할 수 없습니다.", "err");
+        return;
+      }
+    }
     setNotifications(prev => prev.filter(n => n.id !== id));
     toast(t.toastRejected, "info");
   };
@@ -116,7 +166,6 @@ export default function AppShell({ setPage }) {
     // clearToken();
     // disconnect();
 
-    // 더미: 즉시 로그아웃 처리
     setTimeout(() => setPage("landing"), 700);
   };
 
@@ -131,9 +180,9 @@ export default function AppShell({ setPage }) {
           onLogout={handleLogout}
           onMarkAllRead={markAllRead}
         />
-        <Sidebar tab={tab} setTab={setTab} />
+        <Sidebar tab={tab} setTab={setTab} agentInfo={agentInfo} />
         <div className="app-main">
-          {tab === "editor"  && <Editor onAddNotification={addNotification} />}
+          {tab === "editor"  && <Editor onAddNotification={addNotification} agentInfo={agentInfo} connectedPeers={connectedPeers} />}
           {tab === "friends" && <TeamSettings />}
           {tab === "system"  && <SystemSettings />}
           {tab === "payment" && <Payment />}

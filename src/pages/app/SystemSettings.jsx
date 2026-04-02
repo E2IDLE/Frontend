@@ -35,10 +35,21 @@ export default function SystemSettings() {
     setTimeout(() => { setPortStatus("ok"); toast(t.toastPortOk(port), "ok"); }, 1400);
   };
 
-  const save = () => {
+  const save = async () => {
     setSavedBw(bw);
     localStorage.setItem("sys_settings", JSON.stringify({ version: SYS_VERSION, data: { bw, port } }));
     toast(t.toastSettingsSaved((bw*.1).toFixed(1), port), "ok");
+    try {
+      const speedBytes = bw * 0.1 * 1e9;
+      const res = await fetch("http://127.0.0.1:17432/transfer/progress", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ speed: speedBytes }),
+      });
+      if (res.ok) toast("에이전트 대역폭 설정 완료", "ok");
+    } catch {
+      toast("에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요.", "err");
+    }
   };
   const cancel = () => { setBw(savedBw); setPortStatus(null); toast(t.toastSettingsCancelled, "warn"); };
 
