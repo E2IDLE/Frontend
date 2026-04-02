@@ -86,7 +86,7 @@ export default function TeamSettings() {
 
       // 에이전트 피어 목록
       try {
-        const res = await agentCall("GET", "/peers");
+        const res = await agentCall("GET", "/users");
         if (!cancelled) {
           if (res.ok) {
             const raw = await res.json();
