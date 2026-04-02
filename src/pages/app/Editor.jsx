@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "../../utils/toast";
 import { useLang } from "../../i18n";
-
-const AGENT_BASE = "http://127.0.0.1:17432";
+import { agentCall } from "../../utils/api";
 
 const formatBytes = (bytes) => {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
@@ -25,10 +24,13 @@ const toTC = s => {
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}:${String(fr).padStart(2,"0")}`;
 };
 
-const TEST_NAMES = ["김민준","이서연","박지훈","최수아","정도윤","강하은","윤준호","임채원","오시우","한지민",
-                    "James Kim","Sarah Park","David Lee","Emily Choi","Michael Jung"];
+const parseIp = (multiAddress) => {
+  if (!multiAddress) return null;
+  const m = multiAddress.match(/\/ip4\/([^/]+)/);
+  return m ? m[1] : null;
+};
 
-export default function Editor({ onAddNotification, agentInfo, connectedPeers = [] }) {
+export default function Editor({ agentInfo, connectedPeers = [] }) {
   const [playing, setPlaying]       = useState(false);
   const [tcSec, setTcSec]           = useState(14*60+22+4/30);
   const [activeFile, setActiveFile] = useState(0);
@@ -65,7 +67,7 @@ export default function Editor({ onAddNotification, agentInfo, connectedPeers = 
     if (!agentInfo) { setTransferProgress(null); return; }
     const poll = async () => {
       try {
-        const res = await fetch(`${AGENT_BASE}/transfer/progress`);
+        const res = await agentCall("GET", "/transfer/progress");
         if (!res.ok) return;
         const data = await res.json();
         setTransferProgress(data);
@@ -108,12 +110,8 @@ export default function Editor({ onAddNotification, agentInfo, connectedPeers = 
     if (connectedPeers.length === 0) { toast("연결된 피어가 없습니다.", "err"); return; }
     const peer = connectedPeers[0];
     try {
-      const res = await fetch(`${AGENT_BASE}/peers/${peer.peerId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          files: [{ name: file.name, path: file.name, size: file.size, mimeType: file.type }],
-        }),
+      const res = await agentCall("POST", `/peers/${peer.peerId}`, {
+        files: [{ name: file.name, path: file.name, size: file.size, mimeType: file.type }],
       });
       if (res.status === 409) { toast("이미 전송이 진행 중입니다.", "warn"); return; }
       if (res.status === 404) { toast("연결된 피어를 찾을 수 없습니다.", "err"); return; }
@@ -126,7 +124,7 @@ export default function Editor({ onAddNotification, agentInfo, connectedPeers = 
 
   const cancelTransfer = async () => {
     try {
-      const res = await fetch(`${AGENT_BASE}/transfer/cancel`, { method: "POST" });
+      const res = await agentCall("POST", "/transfer/cancel");
       const json = await res.json();
       const mb = ((json.transferredBytes ?? 0) / 1024 / 1024).toFixed(1);
       toast(`전송이 취소되었습니다. (${mb}MB 전송됨)`, "warn");
@@ -235,7 +233,7 @@ export default function Editor({ onAddNotification, agentInfo, connectedPeers = 
             <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)" }}>전송 없음</div>
           )}
           <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8 }}>
-            <span style={{ width:5, height:5, borderRadius:"50%", background: agentInfo ? "var(--green)" : "var(--text3)", display:"inline-block" }} />
+            <span style={{ width:5, height:5, borderRadius:"50%", background: agentInfo?.status ? "var(--green)" : "var(--text3)", display:"inline-block" }} />
             {agentInfo ? (
               <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text3)" }}>
                 {agentInfo.agentName} · v{agentInfo.agentVersion} · {agentInfo.natType}
@@ -247,26 +245,19 @@ export default function Editor({ onAddNotification, agentInfo, connectedPeers = 
         </div>
         <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--border)" }}>
           <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)", letterSpacing:"0.1em", marginBottom:10 }}>{t.nodeInfo}</div>
-          <div style={{ fontSize:12, color:"var(--text2)", marginBottom:2 }}>{t.sender}</div>
-          {agentInfo ? (
-            <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text3)", wordBreak:"break-all" }}>
-              {agentInfo.multiAddress ?? "—"}
+          {agentInfo?.connectedPeer?.[0]?.nickname ? (
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+              <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)" }}>{t.sender}</span>
+              <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text)" }}>{agentInfo.connectedPeer[0].nickname}</span>
             </div>
           ) : (
-            <div style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text3)" }}>IP: 211.232.xx.xx</div>
+            <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)", marginBottom:5 }}>연결된 피어 없음</div>
           )}
-        </div>
-        {onAddNotification && (
-          <div style={{ padding:"12px 14px", marginTop:"auto" }}>
-            <button className="btn-sm" style={{ width:"100%", color:"var(--yellow)", borderColor:"rgba(245,158,11,.4)" }}
-                    onClick={() => {
-                      const name = TEST_NAMES[Math.floor(Math.random() * TEST_NAMES.length)];
-                      onAddNotification(name);
-                    }}>
-              🔔 {t.testConnectBtn}
-            </button>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text3)" }}>IP</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text)" }}>{parseIp(agentInfo?.multiAddress) ?? "—"}</span>
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Center: preview + controls + timeline ── */}

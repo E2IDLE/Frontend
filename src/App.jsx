@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import globalCss from "./styles/globalCss";
 import { useToasts } from "./utils/toast";
 import Toasts from "./components/Toasts";
@@ -14,7 +14,11 @@ export default function App() {
 
   const setPage = (p) => { window.scrollTo(0, 0); setPageState(p); };
 
-  
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token && page === "editor") setPage("login");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
       <style>{globalCss}</style>

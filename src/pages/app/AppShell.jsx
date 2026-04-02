@@ -8,10 +8,9 @@ import Payment from "./Payment";
 import ProfileEdit from "./ProfileEdit";
 import { LangProvider } from "../../i18n";
 import { toast } from "../../utils/toast";
-import { apiFetch, clearToken, getToken, setUnauthHandler } from "../../utils/api";
+import { apiFetch, agentCall, clearToken, getToken, setUnauthHandler } from "../../utils/api";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
-const AGENT_BASE = "http://127.0.0.1:17432";
 const AGENT_VALID_STATUSES = ["idle", "connected", "transferring"];
 
 function loadAvatar() {
@@ -45,7 +44,7 @@ export default function AppShell({ setPage }) {
   useEffect(() => {
     const pollAgent = async () => {
       try {
-        const res = await fetch(`${AGENT_BASE}/status`);
+        const res = await agentCall("GET", "/status");
         const data = await res.json();
         if (AGENT_VALID_STATUSES.includes(data.status)) {
           setAgentInfo(data);
@@ -78,28 +77,26 @@ export default function AppShell({ setPage }) {
     else if (status === "error") toast("연결 중 오류가 발생했습니다.", "err");
   }, []);
 
+  const handlePeerDisconnected = useCallback(() => {
+    toast("상대방 연결이 끊어졌습니다.", "warn");
+  }, []);
+
   const { connect, disconnect } = useWebSocket({
     onPeerJoined: handlePeerJoined,
     onStatusChanged: handleStatusChanged,
+    onPeerDisconnected: handlePeerDisconnected,
   });
 
-  // Connect WebSocket on mount (token already in localStorage after login)
+  // Connect WebSocket on mount
   useEffect(() => {
-    // TODO: 서버 준비 후 주석 해제
-    // setUnauthHandler(() => {
-    //   toast("세션이 만료되었습니다. 다시 로그인해주세요.", "warn");
-    //   setPage("login");
-    // });
-    // const token = getToken();
-    // if (token) connect(token);
-    // return () => disconnect();
+    setUnauthHandler(() => {
+      toast("세션이 만료되었습니다. 다시 로그인해주세요.", "warn");
+      setPage("login");
+    });
+    const token = getToken();
+    if (token) connect(token);
+    return () => disconnect();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Test notification (used by Editor test button — no sessionId)
-  const addNotification = (name) => {
-    const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { id, name, sessionId: null }]);
-  };
 
   const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t) => {
     if (sessionId) {
@@ -117,11 +114,7 @@ export default function AppShell({ setPage }) {
 
     if (peerId && multiAddress) {
       try {
-        const res = await fetch(`${AGENT_BASE}/peers`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ peerId, peerMultiAddress: multiAddress }),
-        });
+        const res = await agentCall("POST", "/peers", { peerId, peerMultiAddress: multiAddress });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           const code = json?.errorCode;
@@ -159,14 +152,13 @@ export default function AppShell({ setPage }) {
   const markAllRead = () => setNotifications([]);
 
   const handleLogout = async () => {
-    // TODO: 서버 준비 후 주석 해제
-    // try {
-    //   await apiFetch("/auth/logout", { method: "POST" });
-    // } catch {}
-    // clearToken();
-    // disconnect();
-
-    setTimeout(() => setPage("landing"), 700);
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+    } catch {}
+    clearToken();
+    disconnect();
+    toast("로그아웃되었습니다.", "warn");
+    setPage("landing");
   };
 
   return (
@@ -182,7 +174,7 @@ export default function AppShell({ setPage }) {
         />
         <Sidebar tab={tab} setTab={setTab} agentInfo={agentInfo} />
         <div className="app-main">
-          {tab === "editor"  && <Editor onAddNotification={addNotification} agentInfo={agentInfo} connectedPeers={connectedPeers} />}
+          {tab === "editor"  && <Editor agentInfo={agentInfo} connectedPeers={connectedPeers} />}
           {tab === "friends" && <TeamSettings />}
           {tab === "system"  && <SystemSettings />}
           {tab === "payment" && <Payment />}

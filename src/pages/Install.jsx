@@ -2,6 +2,7 @@ import { useState } from "react";
 import PubNav from "../components/PubNav";
 import PubFooter from "../components/PubFooter";
 import { toast } from "../utils/toast";
+import { API_BASE } from "../utils/api";
 
 const OS_DATA = {
   windows: {
@@ -55,6 +56,10 @@ export default function Install({ setPage }) {
   const data = OS_DATA[os];
 
   const handleDownload = () => {
+    const a = document.createElement("a");
+    a.href = `${API_BASE}/downloads/${data.file}`;
+    a.download = data.file;
+    a.click();
     toast("다운로드가 시작됩니다.", "ok");
   };
 

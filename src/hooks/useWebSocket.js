@@ -7,10 +7,10 @@ const WS_URL = "wss://api-dev.directp2p.com/ws";
  * Call connect(token) after login; disconnect() on logout.
  * Callbacks are kept fresh via ref to avoid stale closures.
  */
-export function useWebSocket({ onPeerJoined, onStatusChanged }) {
+export function useWebSocket({ onPeerJoined, onStatusChanged, onPeerDisconnected }) {
   const wsRef = useRef(null);
   const cbRef = useRef({});
-  cbRef.current = { onPeerJoined, onStatusChanged };
+  cbRef.current = { onPeerJoined, onStatusChanged, onPeerDisconnected };
 
   const connect = useCallback((token) => {
     if (!token) return;
@@ -24,6 +24,7 @@ export function useWebSocket({ onPeerJoined, onStatusChanged }) {
       const { event, data } = msg;
       if (event === "session:peer_joined") cbRef.current.onPeerJoined?.(data);
       else if (event === "session:status_changed") cbRef.current.onStatusChanged?.(data);
+      else if (event === "session:peer_disconnected") cbRef.current.onPeerDisconnected?.(data);
     };
 
     ws.onerror = () => {};

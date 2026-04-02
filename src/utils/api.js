@@ -1,8 +1,9 @@
-export const API_BASE = "https://api-dev.directp2p.com";
+export const API_BASE = "https://directp2p.happytanuki.kr";
+export const AGENT_BASE = "http://127.0.0.1:17432";
 
-export const getToken = () => localStorage.getItem("dp2p_token");
-export const setToken = (t) => localStorage.setItem("dp2p_token", t);
-export const clearToken = () => localStorage.removeItem("dp2p_token");
+export const getToken = () => localStorage.getItem("token");
+export const setToken = (t) => localStorage.setItem("token", t);
+export const clearToken = () => localStorage.removeItem("token");
 
 let _onUnauth = null;
 export const setUnauthHandler = (fn) => { _onUnauth = fn; };
@@ -33,5 +34,14 @@ export async function apiFetch(path, options = {}) {
     _onUnauth?.();
   }
 
+  return res;
+}
+
+export async function agentCall(method, path, body) {
+  const res = await fetch(`${AGENT_BASE}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
   return res;
 }
