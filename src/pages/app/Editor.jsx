@@ -195,7 +195,7 @@ export default function Editor({ agentInfo, connectedPeers = [] }) {
         <div style={{ padding:"8px 14px", borderBottom:"1px solid var(--border)" }}>
           <button className="btn-sm" style={{ width:"100%", marginBottom:4 }}
                   onClick={() => fileInputRef.current?.click()}>
-            ＋ 미디어 가져오기
+            ＋ 파일 전송
           </button>
           {transferProgress && (transferProgress.status === "transferring" || transferProgress.status === "preparing") && (
             <button className="btn-sm-red" style={{ width:"100%", fontSize:10 }} onClick={cancelTransfer}>
