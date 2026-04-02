@@ -41,42 +41,58 @@ export default function AppShell({ setPage }) {
   const [connectedPeers, setConnectedPeers] = useState([]);
 
   // Agent status polling
+// 1. 에이전트 상태 확인 및 서버에 내 주소 등록 (Registration)
   useEffect(() => {
-  const pollAgent = async () => {
-    try {
-      // 1. 에이전트로부터 최신 상태 가져오기
-      const res = await agentCall("GET", "/status");
-      const data = await res.json();
+    const pollAgentAndRegister = async () => {
+      try {
+        // 에이전트에서 현재 상태 가져오기 (스크린샷에 찍힌 그 데이터)
+        const res = await agentCall("GET", "/status");
+        const data = await res.json();
 
-      if (AGENT_VALID_STATUSES.includes(data.status)) {
-        setAgentInfo(data);
+        // 에이전트 데이터가 유효한지 확인
+        // (스크린샷에 multiAddress와 peerId가 있으니 이를 활용합니다)
+        if (data && data.multiAddress) {
+          setAgentInfo(data);
 
-        // API 서버에 에이전트 정보 등록/업데이트
-        if (data.multiaddress) {
-          await apiFetch("/users/me/agents", {
-            method: "POST",
-            body: JSON.stringify({
-              deviceName: data.deviceName || "My Device", 
-              platform: "windows", 
-              agentVersion: data.version || "1.0.0",
-              multiaddress: data.multiaddress 
-            }),
-          });
-          console.log("서버에 멀티어드레스 업데이트 완료:", data.multiaddress);
+          // 멀티어드레스가 변경되었을 때만 서버에 보고
+          if (data.multiAddress !== prevAddrRef.current) {
+            try {
+              // 서버의 RegisterAgentRequest 구조체에 맞게 매핑
+              await apiFetch("/users/me/agents", {
+                method: "POST",
+                body: JSON.stringify({
+                  // 1. DeviceName: agentName이 비어있다면 peerId 앞글자라도 사용
+                  deviceName: data.agentName || `Device-${data.peerId?.substring(0, 5)}`,
+                  
+                  // 2. Platform: 서버 제약(windows, macos, linux)에 맞춰 전송
+                  // 에이전트 응답에 없다면 일단 기본값 'windows' (필요시 수정)
+                  platform: "windows", 
+                  
+                  // 3. AgentVersion: "0.0.0" 처럼 응답에 있는 값 사용
+                  agentVersion: data.agentVersion || "1.0.0",
+                  
+                  // 4. MultiAddress: 서버 필드명이 소문자 "multiaddress"임에 주의!
+                  multiaddress: data.multiAddress 
+                }),
+              });
+
+              console.log("✅ 서버에 에이전트 등록 성공:", data.multiAddress);
+              prevAddrRef.current = data.multiAddress;
+            } catch (err) {
+              console.error("❌ 서버 등록 실패:", err);
+            }
+          }
         }
-      } else {
+      } catch (err) {
+        console.error("Agent Polling Error:", err);
         setAgentInfo(null);
       }
-    } catch (err) {
-      setAgentInfo(null);
-      console.error("Agent Polling/Registration Error:", err);
-    }
-  };
+    };
 
-  pollAgent();
-  const interval = setInterval(pollAgent, 5000); // 주기 조절 가능
-  return () => clearInterval(interval);
-}, []);
+    pollAgentAndRegister();
+    const interval = setInterval(pollAgentAndRegister, 10000); // 10초마다 체크
+    return () => clearInterval(interval);
+  }, []);
 
   // WebSocket event handlers
   const handlePeerJoined = useCallback((data) => {
