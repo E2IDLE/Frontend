@@ -41,14 +41,11 @@ export default function AppShell({ setPage }) {
   const [connectedPeers, setConnectedPeers] = useState([]);
   const prevAddrRef = useRef("");
 
-  // 1. 에이전트 상태 확인 및 서버 등록 로직
   useEffect(() => {
     const pollAgentAndRegister = async () => {
       try {
         const res = await agentCall("GET", "/status");
-        if (!res.ok) throw new Error();
         const data = await res.json();
-
         if (data && data.multiAddress) {
           setAgentInfo(data);
           if (data.multiAddress !== prevAddrRef.current) {
@@ -57,12 +54,12 @@ export default function AppShell({ setPage }) {
                 method: "POST",
                 body: JSON.stringify({
                   deviceName: data.agentName || `Device-${data.peerId?.substring(0, 5)}`,
-                  platform: "windows", 
+                  platform: "windows",
                   agentVersion: data.agentVersion || "1.0.0",
-                  multiaddress: data.multiAddress 
+                  multiaddress: data.multiAddress
                 }),
               });
-              console.log("✅ 서버 등록 성공:", data.multiAddress);
+              console.log("✅ 서버에 에이전트 등록 성공:", data.multiAddress);
               prevAddrRef.current = data.multiAddress;
             } catch (err) {
               console.error("❌ 서버 등록 실패:", err);
@@ -70,32 +67,30 @@ export default function AppShell({ setPage }) {
           }
         }
       } catch (err) {
+        console.error("Agent Polling Error:", err);
         setAgentInfo(null);
       }
     };
-
     pollAgentAndRegister();
     const interval = setInterval(pollAgentAndRegister, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // 2. WebSocket 이벤트 핸들러들
   const handlePeerJoined = useCallback((data) => {
-    const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? "알 수 없음";
+    const name = data?.peerNickname ?? data?.peerName ?? data?.nickname ?? data?.peer_name ?? "알 수 없음";
+    const sessionId = data?.sessionId ?? data?.session_id;
+    const peerId = data?.peerId ?? data?.peer_id;
+    const multiAddress = data?.multiAddress ?? data?.multi_address;
+    const inviteCode = data?.inviteCode ?? data?.invite_code;
     const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { 
-      id, name, 
-      sessionId: data?.sessionId ?? data?.session_id, 
-      peerId: data?.peerId ?? data?.peer_id, 
-      multiAddress: data?.multiAddress ?? data?.multi_address, 
-      inviteCode: data?.inviteCode ?? data?.invite_code 
-    }]);
+    setNotifications(prev => [...prev, { id, name, sessionId, peerId, multiAddress, inviteCode }]);
   }, []);
 
   const handleStatusChanged = useCallback((data) => {
     const status = data?.status;
     if (status === "connected") toast("P2P 연결 완료!", "ok");
-    else if (status === "error") toast("연결 중 오류 발생", "err");
+    else if (status === "completed") toast("전송이 완료되었습니다.", "ok");
+    else if (status === "error") toast("연결 중 오류가 발생했습니다.", "err");
   }, []);
 
   const handlePeerDisconnected = useCallback(() => {
@@ -104,13 +99,17 @@ export default function AppShell({ setPage }) {
 
   const handleConnectionRequest = useCallback((data) => {
     const name = data?.senderNickname ?? "알 수 없음";
+    const sessionId = data?.sessionId;
+    const inviteCode = data?.inviteCode;
     const id = notifIdRef.current++;
-    setNotifications(prev => [...prev, { id, name, sessionId: data?.sessionId, inviteCode: data?.inviteCode }]);
+    setNotifications(prev => [...prev, { id, name, sessionId, inviteCode }]);
     toast(`${name}님이 연결을 신청했습니다.`, "ok");
   }, []);
 
   const handleNotification = useCallback((data) => {
-    toast(`${data?.title || "알림"}: ${data?.message || "메시지 도착"}`, "ok");
+    const title = data?.title || "알림";
+    const message = data?.message || "새로운 메시지가 도착했습니다.";
+    toast(`${title}: ${message}`, "ok");
   }, []);
 
   const { connect, disconnect } = useWebSocket({
@@ -121,63 +120,87 @@ export default function AppShell({ setPage }) {
     onNotification: handleNotification,
   });
 
-  // 3. 🔥 [수정됨] WebSocket 연결 로직 (의존성 비움)
   useEffect(() => {
     setUnauthHandler(() => {
+      toast("세션이 만료되었습니다. 다시 로그인해주세요.", "warn");
       setPage("login");
     });
     const token = getToken();
     if (token) connect(token);
+    return () => disconnect();
+  }, []);
 
-    return () => {
-      if (disconnect) disconnect();
-    };
-  }, []); // 👈 의존성 배열을 비워야 무한 루프가 안 생깁니다!
-
-  // 4. 연결 수락 로직
   const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t, inviteCode) => {
     let targetPeerId = peerId;
     let targetMultiAddress = multiAddress;
-
     if (sessionId) {
       try {
         const res = await apiFetch(`/sessions/${sessionId}/join`, {
           method: "POST",
           body: JSON.stringify({ inviteCode }),
         });
-        if (res.ok) {
-          const joinData = await res.json();
-          if (joinData.peerId) targetPeerId = joinData.peerId;
-          if (joinData.multiAddress) targetMultiAddress = joinData.multiAddress;
+        if (!res.ok) {
+          if (res.status === 404) toast("세션이 만료되었습니다.", "warn");
+          else toast("연결 수락에 실패했습니다.", "err");
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          return;
         }
+        const joinData = await res.json().catch(() => ({}));
+        console.log("서버에서 받은 조인 데이터:", joinData);
+        if (joinData.peerId) targetPeerId = joinData.peerId;
+        if (joinData.multiAddress) targetMultiAddress = joinData.multiAddress;
       } catch (err) {
-        toast("서버 연결 실패", "err");
+        console.error("Join Error:", err);
+        toast("서버에 연결할 수 없습니다.", "err");
         return;
       }
     }
-
     if (targetPeerId && targetMultiAddress) {
       try {
-        const res = await agentCall("POST", "/peers", { peerId: targetPeerId, peerMultiAddress: targetMultiAddress });
-        if (res.ok) {
-          setConnectedPeers(prev => [...prev, { peerId: targetPeerId, nickname: name }]);
-          toast("연결 성공!", "ok");
+        toast("에이전트와 피어 연결을 시도합니다...", "ok");
+        const res = await agentCall("POST", "/peers", {
+          peerId: targetPeerId,
+          peerMultiAddress: targetMultiAddress
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const code = json?.errorCode;
+          if (code === "E3002") toast("피어 연결에 실패했습니다.", "err");
+          else if (code === "E5002") toast("홀펀칭 실패. 릴레이(TURN)로 전환합니다.", "warn");
+          else toast("피어 연결 실패 (에이전트 에러)", "err");
+          return;
         }
+        setConnectedPeers(prev => [...prev, { peerId: targetPeerId, nickname: name }]);
+        toast(`${name}님과 P2P 연결이 완료되었습니다!`, "ok");
       } catch (err) {
-        toast("에이전트 연결 실패", "err");
+        console.error("Agent Call Error:", err);
+        toast("에이전트가 실행 중인지 확인해주세요.", "err");
+        return;
       }
+    } else {
+      console.warn("홀펀칭 실패: peerId 또는 multiAddress가 없습니다.");
+      toast("연결 정보가 부족하여 P2P 터널을 생성할 수 없습니다.", "err");
     }
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const rejectNotification = (id) => {
+  const rejectNotification = async (id, sessionId) => {
+    if (sessionId) {
+      try {
+        await apiFetch(`/sessions/${sessionId}`, { method: "DELETE" });
+      } catch { }
+    }
     setNotifications(prev => prev.filter(n => n.id !== id));
+    toast("연결 신청을 거절했습니다.", "warn");
   };
 
   const handleLogout = async () => {
-    try { await apiFetch("/auth/logout", { method: "POST" }); } catch {}
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+    } catch {}
     clearToken();
     disconnect();
+    toast("로그아웃되었습니다.", "warn");
     setPage("landing");
   };
 
@@ -194,9 +217,9 @@ export default function AppShell({ setPage }) {
         />
         <Sidebar tab={tab} setTab={setTab} agentInfo={agentInfo} />
         <div className="app-main">
-          {tab === "editor"  && <Editor agentInfo={agentInfo} connectedPeers={connectedPeers} />}
+          {tab === "editor" && <Editor agentInfo={agentInfo} connectedPeers={connectedPeers} />}
           {tab === "friends" && <TeamSettings />}
-          {tab === "system"  && <SystemSettings />}
+          {tab === "system" && <SystemSettings />}
           {tab === "payment" && <Payment />}
           {tab === "profile" && <ProfileEdit onAvatarChange={setAvatar} onLangChange={setLang} />}
         </div>
