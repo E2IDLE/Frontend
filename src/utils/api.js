@@ -21,11 +21,16 @@ export async function apiFetch(path, options = {}) {
     ...(options.headers ?? {}),
   };
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   let res;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
   } catch {
     throw { type: "network" };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // Auto-logout on 401 for authenticated (non-auth) endpoints
