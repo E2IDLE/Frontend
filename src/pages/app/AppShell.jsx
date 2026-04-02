@@ -39,6 +39,7 @@ export default function AppShell({ setPage }) {
   const notifIdRef = useRef(1);
   const [agentInfo, setAgentInfo] = useState(null);
   const [connectedPeers, setConnectedPeers] = useState([]);
+  const prevAddrRef = useRef("");
 
   // Agent status polling
 // 1. 에이전트 상태 확인 및 서버에 내 주소 등록 (Registration)
