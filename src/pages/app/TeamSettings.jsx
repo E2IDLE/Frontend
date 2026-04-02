@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { toast } from "../../utils/toast";
-import { apiFetch, agentCall } from "../../utils/api";
+import { apiFetch } from "../../utils/api";
 
-async function requestConnect(peer) {
+async function requestConnect(user) {
   try {
     const res = await apiFetch("/sessions", {
       method: "POST",
-      body: JSON.stringify({ peerId: peer.peerId }),
+      body: JSON.stringify({ userId: user.userId }),
     });
     if (res.ok) {
       toast("연결 신청을 보냈습니다.", "ok");
@@ -14,15 +14,14 @@ async function requestConnect(peer) {
       toast("연결 신청에 실패했습니다.", "err");
     }
   } catch {
-    toast("에이전트에 연결할 수 없습니다.", "err");
+    toast("연결 신청에 실패했습니다.", "err");
   }
 }
 
-// 피어 응답에서 배열을 추출 (배열 직접 반환 or { peers/data/items: [] } 등 래핑 대응)
-function extractPeers(raw) {
+function extractUsers(raw) {
   if (Array.isArray(raw)) return raw;
   if (raw && typeof raw === "object") {
-    const nested = raw.peers ?? raw.data ?? raw.items ?? raw.list;
+    const nested = raw.users ?? raw.data ?? raw.items ?? raw.list;
     if (Array.isArray(nested)) return nested;
   }
   return [];
@@ -37,28 +36,9 @@ function ConnectionStatus({ dot, label }) {
   );
 }
 
-function MeStatus({ peers }) {
-  const hasConnected = peers.some(p => p.status === "connected");
-  if (hasConnected) {
-    return <ConnectionStatus dot="active" label="연결 중" />;
-  }
-  return <ConnectionStatus dot="idle" label="대기 중" />;
-}
-
-function PeerStatus({ status, connectionType }) {
-  if (status === "connected" && connectionType) {
-    return <ConnectionStatus dot="active" label="연결 중" />;
-  }
-  if (status === "connected") {
-    return <ConnectionStatus dot="idle" label="대기 중" />;
-  }
-  return <ConnectionStatus dot="offline" label="접속 종료" />;
-}
-
 export default function TeamSettings() {
   const [me, setMe] = useState(null);
-  const [peers, setPeers] = useState([]);
-  const [agentError, setAgentError] = useState(false);
+  const [others, setOthers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,39 +47,36 @@ export default function TeamSettings() {
     async function loadData() {
       setLoading(true);
 
+      let myProfile = null;
+
       // 내 프로필
       try {
         const res = await apiFetch("/users/me");
-        if (!cancelled) {
-          if (res.ok) {
-            setMe(await res.json());
-          } else {
-            toast("유저 정보를 불러오지 못했습니다.", "err");
-          }
+        if (!cancelled && res.ok) {
+          myProfile = await res.json();
+          setMe(myProfile);
+        } else if (!cancelled) {
+          toast("유저 정보를 불러오지 못했습니다.", "err");
         }
       } catch {
         if (!cancelled) toast("유저 정보를 불러오지 못했습니다.", "err");
       }
 
-      // 에이전트 피어 목록
+      // 전체 유저 목록 (나 제외)
       try {
-        const res = await apiCall("GET", "/users");
+        const res = await apiFetch("/users");
         if (!cancelled) {
           if (res.ok) {
             const raw = await res.json();
-            console.log("[TeamSettings] /peers raw:", raw);
-            setPeers(extractPeers(raw));
-            setAgentError(false);
+            const all = extractUsers(raw);
+            const myId = myProfile?.userId;
+            setOthers(myId ? all.filter(u => u.userId !== myId) : all);
           } else {
-            setPeers([]);
-            setAgentError(true);
+            toast("유저 목록을 불러오지 못했습니다.", "err");
           }
         }
       } catch {
-        if (!cancelled) {
-          setPeers([]);
-          setAgentError(true);
-        }
+        if (!cancelled) toast("유저 목록을 불러오지 못했습니다.", "err");
       }
 
       if (!cancelled) setLoading(false);
@@ -109,7 +86,7 @@ export default function TeamSettings() {
     return () => { cancelled = true; };
   }, []);
 
-  const totalCount = (me ? 1 : 0) + peers.length;
+  const totalCount = (me ? 1 : 0) + others.length;
 
   return (
     <div style={{ padding: 24, flex: 1 }}>
@@ -168,60 +145,60 @@ export default function TeamSettings() {
                               padding: "1px 6px", borderRadius: 2,
                             }}>나</span>
                           </div>
-                          <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--mono)" }}>
-                            {me.userId ? String(me.userId).slice(0, 8) : "—"}
+                          <div style={{ fontSize: 11, color: "var(--text3)" }}>
+                            {me.email}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td><span className="role-badge admin">Admin</span></td>
-                    <td><MeStatus peers={peers} /></td>
+                    <td><ConnectionStatus dot="idle" label="대기 중" /></td>
                     <td></td>
                   </tr>
                 )}
 
-                {peers.map(peer => (
-                  <tr key={peer.peerId}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                          width: 28, height: 28, borderRadius: "50%",
-                          background: "var(--surface2)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontFamily: "var(--mono)", fontSize: 10, color: "var(--text)", fontWeight: 700, flexShrink: 0,
-                        }}>
-                          {(peer.nickname || peer.peerId || "?")[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>
-                            {peer.nickname || "알 수 없음"}
+                {others.map(user => {
+                  const display = user.nickname || user.email || String(user.userId || "");
+                  const initial = display[0]?.toUpperCase() || "?";
+                  return (
+                    <tr key={user.userId ?? user.email}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: "50%",
+                            background: "var(--surface2)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontFamily: "var(--mono)", fontSize: 10, color: "var(--text)", fontWeight: 700, flexShrink: 0,
+                          }}>
+                            {initial}
                           </div>
-                          <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--mono)" }}>
-                            {peer.peerId ? String(peer.peerId).slice(0, 8) : "—"}
+                          <div>
+                            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>
+                              {display}
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--text3)" }}>
+                              {user.email || "—"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td><span className="role-badge editor">Editor</span></td>
-                    <td>
-                      <PeerStatus status={peer.status} connectionType={peer.connectionType} />
-                    </td>
-                    <td>
-                      <button className="btn-sm-blue" onClick={() => requestConnect(peer)}>
-                        연결 신청
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td><span className="role-badge editor">Editor</span></td>
+                      <td><ConnectionStatus dot="idle" label="대기 중" /></td>
+                      <td>
+                        <button className="btn-sm-blue" onClick={() => requestConnect(user)}>
+                          연결 신청
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          {peers.length === 0 && (
+          {others.length === 0 && (
             <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text2)", fontSize: 13 }}>
-              {agentError
-                ? "에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요."
-                : "연결된 피어가 없습니다. 상대방과 연결하세요."}
+              등록된 다른 유저가 없습니다.
             </div>
           )}
         </>
