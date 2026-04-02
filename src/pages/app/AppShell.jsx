@@ -54,7 +54,8 @@ export default function AppShell({ setPage }) {
           setAgentInfo(data);
 
           // 🔥 중요: 멀티어드레스가 변경되었을 때만 서버에 보고
-          if (data.multiAddress !== prevAddrRef.current) {
+          //if (data.multiAddress !== prevAddrRef.current) {
+          if (data.multiAddress) {
             try {
               // 서버의 RegisterAgentRequest 구조체에 맞게 매핑
               await apiFetch("/users/me/agents", {
