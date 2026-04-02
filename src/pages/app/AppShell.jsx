@@ -118,43 +118,69 @@ export default function AppShell({ setPage }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const acceptNotification = async (id, name, sessionId, peerId, multiAddress, t, inviteCode) => {
+    let targetPeerId = peerId;
+    let targetMultiAddress = multiAddress;
+
     if (sessionId) {
       try {
         const res = await apiFetch(`/sessions/${sessionId}/join`, {
           method: "POST",
           body: JSON.stringify({ inviteCode }),
         });
+
         if (!res.ok) {
           if (res.status === 404) toast("세션이 만료되었습니다.", "warn");
           else toast("연결 수락에 실패했습니다.", "err");
           setNotifications(prev => prev.filter(n => n.id !== id));
           return;
         }
-      } catch {
+
+        // 🔥 [추가됨] 서버 응답에서 상대방 에이전트 정보를 받아옵니다.
+        const joinData = await res.json().catch(() => ({}));
+        console.log("서버에서 받은 조인 데이터:", joinData);
+
+        // 서버가 peerId와 multiAddress를 응답에 포함시켜 준다면 여기서 덮어씌웁니다.
+        if (joinData.peerId) targetPeerId = joinData.peerId;
+        if (joinData.multiAddress) targetMultiAddress = joinData.multiAddress;
+
+      } catch (err) {
+        console.error("Join Error:", err);
         toast("서버에 연결할 수 없습니다.", "err");
         return;
       }
     }
 
-    if (peerId && multiAddress) {
+    // 수집된 타겟 정보를 바탕으로 에이전트에게 홀펀칭 요청
+    if (targetPeerId && targetMultiAddress) {
       try {
-        const res = await agentCall("POST", "/peers", { peerId, peerMultiAddress: multiAddress });
+        toast("에이전트와 피어 연결을 시도합니다...", "ok");
+        
+        const res = await agentCall("POST", "/peers", { 
+          peerId: targetPeerId, 
+          peerMultiAddress: targetMultiAddress 
+        });
+
         const json = await res.json().catch(() => ({}));
+
         if (!res.ok) {
           const code = json?.errorCode;
           if (code === "E3002") toast("피어 연결에 실패했습니다.", "err");
-          else if (code === "E5002") toast("홀펀칭에 실패했습니다. TURN 릴레이로 전환합니다.", "warn");
-          else toast("피어 연결에 실패했습니다.", "err");
+          else if (code === "E5002") toast("홀펀칭 실패. 릴레이(TURN)로 전환합니다.", "warn");
+          else toast("피어 연결 실패 (에이전트 에러)", "err");
           return;
         }
-        setConnectedPeers(prev => [...prev, { peerId, nickname: name }]);
-        toast("피어와 연결되었습니다.", "ok");
-      } catch {
-        toast("에이전트에 연결할 수 없습니다. 에이전트가 실행 중인지 확인하세요.", "err");
+
+        setConnectedPeers(prev => [...prev, { peerId: targetPeerId, nickname: name }]);
+        toast(`${name}님과 P2P 연결이 완료되었습니다!`, "ok");
+      } catch (err) {
+        console.error("Agent Call Error:", err);
+        toast("에이전트가 실행 중인지 확인해주세요.", "err");
         return;
       }
     } else {
-      toast("연결되었습니다!", "ok");
+      // 서버에서 데이터가 안 오면 명령 실패
+      console.warn("홀펀칭 실패: peerId 또는 multiAddress가 없습니다.");
+      toast("연결 정보가 부족하여 P2P 터널을 생성할 수 없습니다.", "err");
     }
 
     setNotifications(prev => prev.filter(n => n.id !== id));
