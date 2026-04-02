@@ -59,20 +59,6 @@ export default function SystemSettings() {
           <input type="range" className="slider" min="0" max="100" value={bw} onChange={e=>setBw(+e.target.value)} />
           <div style={{ display:"flex",justifyContent:"space-between",fontFamily:"var(--mono)",fontSize:9,color:"var(--text3)",marginTop:4 }}><span>0 Gbps</span><span>10 Gbps</span></div>
         </div>
-
-        <div className="settings-card">
-          <div style={{ fontFamily:"var(--display)",fontSize:14,fontWeight:700,marginBottom:16 }}>{t.portFwd}</div>
-          <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:8 }}>
-            <input style={{ background:"var(--bg)",border:"1px solid var(--border)",borderRadius:4,padding:"8px 12px",color:"var(--text)",fontFamily:"var(--mono)",fontSize:13,outline:"none",width:120 }}
-              value={port} onChange={e=>{setPort(e.target.value);setPortStatus(null);}} onKeyDown={e=>e.key==="Enter"&&verifyPort()} />
-            <button className="btn-sm" onClick={verifyPort} disabled={portStatus==="checking"}>
-              {portStatus==="checking"?<><span className="spinner"/>{t.portChecking}</>:t.portCheck}
-            </button>
-            {portStatus==="ok" && <span className="port-ok">✓ OK</span>}
-            {portStatus==="fail" && <span style={{ fontFamily:"var(--mono)",fontSize:10,color:"var(--red)" }}>{t.portFail}</span>}
-          </div>
-          <div style={{ fontSize:11,color:"var(--text3)",lineHeight:1.5 }}>{t.portHelp}</div>
-        </div>
       </div>
 
       <div className="settings-card">

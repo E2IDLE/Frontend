@@ -82,10 +82,20 @@ export default function AppShell({ setPage }) {
     toast("상대방 연결이 끊어졌습니다.", "warn");
   }, []);
 
+  const handleConnectionRequest = useCallback((data) => {
+    const name = data?.senderNickname ?? "알 수 없음";
+    const sessionId = data?.sessionId;
+    const inviteCode = data?.inviteCode;
+    const id = notifIdRef.current++;
+    setNotifications(prev => [...prev, { id, name, sessionId, inviteCode }]);
+    toast(`${name}님이 연결을 신청했습니다.`, "ok");
+  }, []);
+
   const { connect, disconnect } = useWebSocket({
     onPeerJoined: handlePeerJoined,
     onStatusChanged: handleStatusChanged,
     onPeerDisconnected: handlePeerDisconnected,
+    onConnectionRequest: handleConnectionRequest,
   });
 
   // Connect WebSocket on mount
