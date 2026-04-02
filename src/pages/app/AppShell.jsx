@@ -214,10 +214,19 @@ export default function AppShell({ setPage }) {
         return;
       }
 
+      // 수정된 코드
       const agents = await agentsRes.json();
-      const onlineAgent = agents.find(a => a.status === "online");
+      console.log("🔍 백엔드가 준 상대방 에이전트 전체 목록:", agents); // 여기서 서버 데이터를 눈으로 확인합니다!
+
+      // 상태값이 대문자이거나, idle, connected 등일 수 있으니 조건을 유연하게 변경
+      const onlineAgent = agents.find(a => {
+        if (!a.status) return false;
+        const s = a.status.toLowerCase();
+        return s === "online" || s === "connected" || s === "idle";
+      }) || agents[0]; // 그래도 없으면 그냥 목록의 첫 번째 에이전트 선택!
 
       if (!onlineAgent || !onlineAgent.multiaddress) {
+        console.error("❌ 연결할 수 있는 에이전트가 없음. 선택된 에이전트:", onlineAgent);
         toast("상대방 에이전트가 오프라인이거나 주소가 없습니다.", "warn");
         setNotifications(prev => prev.filter(n => n.id !== id));
         return;
