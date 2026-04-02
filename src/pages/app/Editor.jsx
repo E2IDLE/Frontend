@@ -80,7 +80,7 @@ export default function Editor({ agentInfo, connectedPeers = [] }) {
       } catch { /* silent */ }
     };
     poll();
-    const id = setInterval(poll, 2000);
+    const id = setInterval(poll, 30000);
     return () => clearInterval(id);
   }, [agentInfo]);
 

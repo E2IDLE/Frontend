@@ -18,7 +18,8 @@ async function requestConnect(user) {
       // 2. 서버가 기다리는 필드명에 맞춰 확실하게 전달
       body: JSON.stringify({ 
         receiverId: targetId, // 'userId' 대신 'receiverId'를 명시적으로 보내보세요
-        userId: targetId      // 혹시 모르니 기존 필드도 유지
+        userId: targetId,      // 혹시 모르니 기존 필드도 유지
+        UserID: targetId //
       }),
     });
 
