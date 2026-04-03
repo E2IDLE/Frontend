@@ -14,7 +14,7 @@ export default function Pricing({ setPage }) {
     <div className="page">
       <PubNav setPage={setPage} />
       <div style={{ padding:"80px 48px 60px",textAlign:"center" }}>
-        <div className="section-label">// PRICING PLANS</div>
+        <div className="section-label">// PRICING PㅌLANS</div>
         <h1 style={{ fontFamily:"var(--display)",fontSize:"clamp(36px,5vw,60px)",fontWeight:800,letterSpacing:"-.03em",marginBottom:16 }}>전문가용 워크플로우를 위한<br />합리적인 요금제</h1>
         <p style={{ fontSize:15,color:"var(--text2)",maxWidth:480,margin:"0 auto" }}>복잡한 전송 과정은 잊으세요. 영상 전문가를 위해 설계된 최적의 P2P 전송 솔루션을 선택하세요.</p>
       </div>
@@ -26,7 +26,7 @@ export default function Pricing({ setPage }) {
         </div>
         <div className="plan-card rec">
           <div className="plan-rec-badge">RECOMMENDED</div>
-          <div className="plan-name">PRO</div><div className="plan-price">$70</div><div className="plan-period">/month</div>
+          <div className="plan-name">PRO</div><div className="plan-price">$320</div><div className="plan-period">/month</div>
           <ul className="plan-features">{["무제한 8K RAW 전송","Priority QUIC Stream (초고속)","최대 10명의 팀원 협업","24/7 전담 기술 지원","커스텀 브랜딩 링크"].map(f=><li className="plan-feature" key={f}><span className="plan-check">✓</span>{f}</li>)}</ul>
           <button className="plan-btn pro" onClick={() => setPage("signup")}>Pro 선택하기</button>
         </div>
