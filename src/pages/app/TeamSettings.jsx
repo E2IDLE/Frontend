@@ -55,7 +55,7 @@ function ConnectionStatus({ dot, label }) {
   );
 }
 
-export default function TeamSettings() {
+export default function TeamSettings({ agentInfo }) {
   const [me, setMe] = useState(null);
   const [others, setOthers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,6 +218,27 @@ export default function TeamSettings() {
             </div>
           )}
         </>
+      )}
+
+      {!agentInfo && (
+        <div style={{
+          marginTop: 20,
+          padding: "12px 16px",
+          background: "rgba(255, 180, 0, 0.08)",
+          border: "1px solid rgba(255, 180, 0, 0.35)",
+          borderRadius: 6,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          fontSize: 13,
+          color: "var(--text2)",
+        }}>
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span>
+            로컬 에이전트가 실행되지 않았습니다.{" "}
+            <strong style={{ color: "var(--text)" }}>에이전트를 설치 후 실행해주세요.</strong>
+          </span>
+        </div>
       )}
     </div>
   );

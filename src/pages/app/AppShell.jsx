@@ -284,7 +284,7 @@ export default function AppShell({ setPage }) {
         <Sidebar tab={tab} setTab={setTab} agentInfo={agentInfo} />
         <div className="app-main">
           {tab === "editor" && <Editor agentInfo={agentInfo} connectedPeers={connectedPeers} />}
-          {tab === "friends" && <TeamSettings />}
+          {tab === "friends" && <TeamSettings agentInfo={agentInfo} />}
           {tab === "system" && <SystemSettings />}
           {tab === "payment" && <Payment />}
           {tab === "profile" && <ProfileEdit onAvatarChange={setAvatar} onLangChange={setLang} />}
